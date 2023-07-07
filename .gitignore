@@ -1,3 +1,8 @@
 *.log
 *.txt
+*.tsv
+*.pkl
+*.csv
+*.h5
+*.json
 **/data
