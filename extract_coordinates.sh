@@ -3,4 +3,4 @@
 #SBATCH --partition=math-alderaan
 #SBATCH --time=7-00:00:00  
 
-python3 extract_coordinates.py data/swissprot_pdb_v4 >& extract_coordinates.log
+python extract_coordinates.py data/swissprot_pdb_v4 >& extract_coordinates.log
