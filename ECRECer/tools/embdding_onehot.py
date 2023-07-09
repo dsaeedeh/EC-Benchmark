@@ -18,7 +18,7 @@ from tqdm import tqdm
 from pandarallel import pandarallel # 导入pandaralle
 sys.path.append(os.path.dirname(os.path.realpath('__file__')))
 sys.path.append('../')
-import config as cfg
+import ECRECer.config as cfg
 
 # amino acid 编码字典
 prot_dict = dict(

@@ -5,7 +5,7 @@ from tqdm import tqdm
 import time
 import sys,os
 sys.path.append(os.getcwd())
-import config as cfg
+import ECRECer.config as cfg
 import pandas as pd
 
 #region 从gizp读取数据
