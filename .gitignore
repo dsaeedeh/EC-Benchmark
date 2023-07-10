@@ -10,4 +10,5 @@
 *.tar
 *.tar.gz
 *.xml
+*.feather
 **/data
