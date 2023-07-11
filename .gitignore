@@ -11,4 +11,5 @@
 *.tar.gz
 *.xml
 *.feather
+*.xlsx
 **/data
