@@ -8,6 +8,11 @@
 
 ## Installation
 
+
+Run the following file to concat fasta files (pretrain.fasta, train.fasta and test.fasta). Be sure no other .fasta files are existed in the data directory
+We need all.fasta file to run mmseqs2 on it!
+
+run_mmseqs2.sh
 ## Usage
 
 ## Contributing
