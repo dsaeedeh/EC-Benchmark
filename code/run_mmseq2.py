@@ -11,8 +11,10 @@ from tqdm import tqdm
 pretrain: 108857716
 train: 556825
 test: 2601
-sum: 109417142
 all: 109417142
+----------------------------------------
+train with 3d structure: 534096
+test with 3d structure: 1536
 '''
 def count_protein_number(fasta_file):
     count = 0
@@ -20,3 +22,7 @@ def count_protein_number(fasta_file):
         count += 1
     return count
 
+n_train = count_protein_number('data/train_having_3d.fasta')
+n_test = count_protein_number('data/test_having_3d.fasta')
+print(f'train: {n_train}')
+print(f'test: {n_test}')

@@ -127,6 +127,7 @@ def check_3d_information(train_path, test_path, info_file_path):
         if id not in info_ids:
             test_ids_not_in_info.append(id)
     
+    # In our case, Number of train ids not in info file: 22729; Number of test ids not in info file: 1065
     print(f'Number of train ids not in info file: {len(train_ids_not_in_info)}')
     print(f'Number of test ids not in info file: {len(test_ids_not_in_info)}')
 
@@ -146,6 +147,7 @@ if __name__ == '__main__':
     parser.add_argument('--info_file_path', type=str, help='Path to the 3d coordinates file')
     args = parser.parse_args()
 
+    # run following functions in order
     create_tsv_from_data()
     preprocessing(pretrain_path=args.pretrain_path, train_path=args.train_path, test_path=args.test_path)
     check_3d_information(train_path=args.train_path, test_path=args.test_path, info_file_path=args.info_file_path)
