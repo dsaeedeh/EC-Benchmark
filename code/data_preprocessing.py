@@ -138,6 +138,21 @@ def check_3d_information(train_path, test_path, info_file_path):
     SeqIO.write((record for record in SeqIO.parse(test_path, 'fasta') if record.id in test_ids), 'data/test_having_3d.fasta', 'fasta')
 
 
+'''
+pretrain: 108857716
+train: 556825
+test: 2601
+all: 109417142
+----------------------------------------
+train with 3d structure: 534096
+test with 3d structure: 1536
+'''
+def count_protein_number(fasta_file):
+    count = 0
+    for record in SeqIO.parse(fasta_file, 'fasta'):
+        count += 1
+    return count
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data merging script')
@@ -151,5 +166,22 @@ if __name__ == '__main__':
     create_tsv_from_data()
     preprocessing(pretrain_path=args.pretrain_path, train_path=args.train_path, test_path=args.test_path)
     check_3d_information(train_path=args.train_path, test_path=args.test_path, info_file_path=args.info_file_path)
+
+    # Count the number of proteins in a fasta file using biopython
+    count_pretrain = count_protein_number('data/pretrain.fasta')
+    count_train = count_protein_number('data/train.fasta')
+    count_test = count_protein_number('data/test.fasta')
+    count_all = count_protein_number('data/all.fasta')
+
+    print(f'pretrain: {count_pretrain}')
+    print(f'train: {count_train}')
+    print(f'test: {count_test}')
+    print(f'sum: {count_pretrain+count_train+count_test}')
+    print(f'all: {count_all}')
+
+    n_train = count_protein_number('data/train_having_3d.fasta')
+    n_test = count_protein_number('data/test_having_3d.fasta')
+    print(f'train with 3d structure: {n_train}')
+    print(f'test with 3d structure: {n_test}')
 
 
