@@ -146,6 +146,7 @@ all: 109417142
 ----------------------------------------
 train with 3d structure: 534096
 test with 3d structure: 1536
+all: 109393348
 '''
 def count_protein_number(fasta_file):
     count = 0
