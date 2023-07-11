@@ -11,6 +11,9 @@ from ECRECer.tools import funclib
 from ECRECer.tools import minitools as mtool
 from ECRECer.tools import embdding_onehot as onehotebd
 from pandarallel import pandarallel
+from Bio import SeqIO
+import json
+
 pandarallel.initialize(progress_bar=True)
 
 
@@ -103,15 +106,48 @@ def preprocessing(pretrain_path, train_path, test_path):
     funclib.table2fasta(table=train[['id', 'seq']], file_out='data/train.fasta')
     funclib.table2fasta(table=test[['id', 'seq']], file_out='data/test.fasta')
  
+# Check if we have 3d information for all train and test data
+def check_3d_information(train_path, test_path, info_file_path):
+    # get the protein ids from fasta files using biopython
+    train_ids = [record.id for record in SeqIO.parse(train_path, 'fasta')]
+    test_ids = [record.id for record in SeqIO.parse(test_path, 'fasta')]
+    train_ids_not_in_info = []
+    test_ids_not_in_info = []
+
+    # get the ids from json info_file
+    with open(info_file_path, 'r') as f:
+        info = json.load(f)
+        info_ids = list(info.keys())
+    
+    # check if all ids are in the info file
+    for id in train_ids:
+        if id not in info_ids:
+            train_ids_not_in_info.append(id)
+    for id in test_ids:
+        if id not in info_ids:
+            test_ids_not_in_info.append(id)
+    
+    print(f'Number of train ids not in info file: {len(train_ids_not_in_info)}')
+    print(f'Number of test ids not in info file: {len(test_ids_not_in_info)}')
+
+    # exclude ids not in info file from train and test fasta data and save them to new files 
+    train_ids = [id for id in train_ids if id not in train_ids_not_in_info]
+    test_ids = [id for id in test_ids if id not in test_ids_not_in_info]
+    SeqIO.write((record for record in SeqIO.parse(train_path, 'fasta') if record.id in train_ids), 'data/train_having_3d.fasta', 'fasta')
+    SeqIO.write((record for record in SeqIO.parse(test_path, 'fasta') if record.id in test_ids), 'data/test_having_3d.fasta', 'fasta')
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data merging script')
     parser.add_argument('--pretrain_path', type=str, help='Path to the pretrain data')
     parser.add_argument('--train_path', type=str, help='Path to the train data')
     parser.add_argument('--test_path', type=str, help='Path to the test data')
+    parser.add_argument('--info_file_path', type=str, help='Path to the 3d coordinates file')
     args = parser.parse_args()
 
-    #create_tsv_from_data()
+    create_tsv_from_data()
     preprocessing(pretrain_path=args.pretrain_path, train_path=args.train_path, test_path=args.test_path)
+    check_3d_information(train_path=args.train_path, test_path=args.test_path, info_file_path=args.info_file_path)
 
 
