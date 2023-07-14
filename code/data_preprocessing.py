@@ -26,7 +26,17 @@ def read_txt_file(file_path):
     with open(file_path, 'r') as f:
         return f.readlines()
 
-def preprocessing(pretrain_path, train_path, test_path):
+def preprocessing(pretrain_path, train_path, test_path, price_path):
+    # Read the price file
+    price = pd.read_csv(price_path, header=0)
+    price.drop_duplicates(subset=['id', 'seq'], keep='first', inplace=True)
+    price.reset_index(drop=True, inplace=True)
+    price['ec_number'] = price.ec_number.parallel_apply(lambda x: mtool.format_ec(x))
+    price['ec_number'] = price.ec_number.parallel_apply(lambda x: mtool.specific_ecs(x))
+    price['functionCounts'] = price.ec_number.parallel_apply(lambda x: 0 if x=='-' else len(x.split(',')))
+    print('price finished')
+    price.to_feather('data/snp_price.feather')
+
     pretrain_data = pd.read_csv(pretrain_path, sep='\t', header=0)
     pretrain_data = mtool.convert_DF_dateTime(inputdf=pretrain_data)
     pretrain_data.drop_duplicates(subset=['id', 'seq'], keep='first', inplace=True)
@@ -78,6 +88,11 @@ def preprocessing(pretrain_path, train_path, test_path):
     test = test[~test.id.isin(test.merge(train, on='id', how='inner').id.values)]
     test.reset_index(drop=True, inplace=True)
 
+    pretrain = pretrain[~pretrain.id.isin(pretrain.merge(price, on='id', how='inner').id.values)]
+    train = train[~train.id.isin(train.merge(price, on='id', how='inner').id.values)]
+    train.reset_index(drop=True, inplace=True)
+    pretrain.reset_index(drop=True, inplace=True)
+
     # Trim sequences
     with pd.option_context('mode.chained_assignment', None):
         pretrain.ec_number = pretrain.ec_number.parallel_apply(lambda x : str(x).strip())
@@ -88,6 +103,9 @@ def preprocessing(pretrain_path, train_path, test_path):
 
         test.ec_number = test.ec_number.parallel_apply(lambda x : str(x).strip())
         test.seq = test.seq.parallel_apply(lambda x : str(x).strip())
+
+        price.ec_number = price.ec_number.parallel_apply(lambda x : str(x).strip())
+        price.seq = price.seq.parallel_apply(lambda x : str(x).strip())
         
     pretrain.to_feather('data/pretrain.feather')
     train.to_feather('data/train.feather')
@@ -101,18 +119,23 @@ def preprocessing(pretrain_path, train_path, test_path):
     pretrain.to_feather('data/pretrain_ec.feather')
     train.to_feather('data/train_ec.feather')
     test.to_feather('data/test_ec.feather')
+    price.to_feather('data/price.feather')
 
     funclib.table2fasta(table=pretrain[['id', 'seq']], file_out='data/pretrain.fasta')
     funclib.table2fasta(table=train[['id', 'seq']], file_out='data/train.fasta')
     funclib.table2fasta(table=test[['id', 'seq']], file_out='data/test.fasta')
+    funclib.table2fasta(table=price[['id', 'seq']], file_out='data/price.fasta')
  
+
 # Check if we have 3d information for all train and test data
-def check_3d_information(train_path, test_path, info_file_path):
+def check_3d_information(train_path, test_path, price_path, info_file_path):
     # get the protein ids from fasta files using biopython
     train_ids = [record.id for record in SeqIO.parse(train_path, 'fasta')]
     test_ids = [record.id for record in SeqIO.parse(test_path, 'fasta')]
+    price_ids = [record.id for record in SeqIO.parse(price_path, 'fasta')]
     train_ids_not_in_info = []
     test_ids_not_in_info = []
+    price_ids_not_in_info = []
 
     # get the ids from json info_file
     with open(info_file_path, 'r') as f:
@@ -126,16 +149,22 @@ def check_3d_information(train_path, test_path, info_file_path):
     for id in test_ids:
         if id not in info_ids:
             test_ids_not_in_info.append(id)
+    for id in price_ids:
+        if id not in info_ids:
+            price_ids_not_in_info.append(id)
     
     # In our case, Number of train ids not in info file: 22729; Number of test ids not in info file: 1065
     print(f'Number of train ids not in info file: {len(train_ids_not_in_info)}')
     print(f'Number of test ids not in info file: {len(test_ids_not_in_info)}')
+    print(f'Number of price ids not in info file: {len(price_ids_not_in_info)}')
 
     # exclude ids not in info file from train and test fasta data and save them to new files 
     train_ids = [id for id in train_ids if id not in train_ids_not_in_info]
     test_ids = [id for id in test_ids if id not in test_ids_not_in_info]
+    price_ids = [id for id in price_ids if id not in price_ids_not_in_info]
     SeqIO.write((record for record in SeqIO.parse(train_path, 'fasta') if record.id in train_ids), 'data/train_having_3d.fasta', 'fasta')
     SeqIO.write((record for record in SeqIO.parse(test_path, 'fasta') if record.id in test_ids), 'data/test_having_3d.fasta', 'fasta')
+    SeqIO.write((record for record in SeqIO.parse(price_path, 'fasta') if record.id in price_ids), 'data/price_having_3d.fasta', 'fasta')
 
 
 '''
@@ -160,14 +189,16 @@ if __name__ == '__main__':
     parser.add_argument('--pretrain_path', type=str, help='Path to the pretrain data')
     parser.add_argument('--train_path', type=str, help='Path to the train data')
     parser.add_argument('--test_path', type=str, help='Path to the test data')
+    parser.add_argument('--price_path', type=str, help='Path to the price data')
     parser.add_argument('--info_file_path', type=str, help='Path to the 3d coordinates file')
     args = parser.parse_args()
 
-    # run following functions in order
+    # run following functions in order; comment out the functions that have been run
     create_tsv_from_data()
-    preprocessing(pretrain_path=args.pretrain_path, train_path=args.train_path, test_path=args.test_path)
-    check_3d_information(train_path=args.train_path, test_path=args.test_path, info_file_path=args.info_file_path)
+    preprocessing(pretrain_path=args.pretrain_path, train_path=args.train_path, test_path=args.test_path, price_path=args.price_path)
+    check_3d_information(train_path=args.train_path, test_path=args.test_path, price_path= args.price_path, info_file_path=args.info_file_path)
 
+    
     # Count the number of proteins in a fasta file using biopython
     count_pretrain = count_protein_number('data/pretrain.fasta')
     count_train = count_protein_number('data/train.fasta')
@@ -182,7 +213,11 @@ if __name__ == '__main__':
 
     n_train = count_protein_number('data/train_having_3d.fasta')
     n_test = count_protein_number('data/test_having_3d.fasta')
+    n_price = count_protein_number('data/price_having_3d.fasta')
     print(f'train with 3d structure: {n_train}')
     print(f'test with 3d structure: {n_test}')
+    print(f'price with 3d structure: {n_price}')
+
+    
 
 
