@@ -173,7 +173,7 @@ def count_protein_number(fasta_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data merging script')
-    #parser.add_argument('--pretrain_path', type=str, help='Path to the pretrain data')
+    parser.add_argument('--pretrain_path', type=str, help='Path to the pretrain data')
     parser.add_argument('--train_path', type=str, help='Path to the train data')
     parser.add_argument('--test_path', type=str, help='Path to the test data')
     parser.add_argument('--price_path', type=str, help='Path to the price data')
