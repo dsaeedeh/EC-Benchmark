@@ -133,9 +133,6 @@ def check_3d_information(train_path, test_path, price_path, info_file_path):
     train_ids = [record.id for record in SeqIO.parse(train_path, 'fasta')]
     test_ids = [record.id for record in SeqIO.parse(test_path, 'fasta')]
     price_ids = [record.id for record in SeqIO.parse(price_path, 'fasta')]
-    train_ids_not_in_info = []
-    test_ids_not_in_info = []
-    price_ids_not_in_info = []
 
     # get the ids from json info_file
     with open(info_file_path, 'r') as f:
@@ -143,25 +140,15 @@ def check_3d_information(train_path, test_path, price_path, info_file_path):
         info_ids = list(info.keys())
     
     # check if all ids are in the info file
-    for id in train_ids:
-        if id not in info_ids:
-            train_ids_not_in_info.append(id)
-    for id in test_ids:
-        if id not in info_ids:
-            test_ids_not_in_info.append(id)
-    for id in price_ids:
-        if id not in info_ids:
-            price_ids_not_in_info.append(id)
-    
-    # In our case, Number of train ids not in info file: 22729; Number of test ids not in info file: 1065
-    print(f'Number of train ids not in info file: {len(train_ids_not_in_info)}')
-    print(f'Number of test ids not in info file: {len(test_ids_not_in_info)}')
-    print(f'Number of price ids not in info file: {len(price_ids_not_in_info)}')
+    train_ids = list(set(train_ids).intersection(set(info_ids)))
+    test_ids = list(set(test_ids).intersection(set(info_ids)))
+    price_ids = list(set(price_ids).intersection(set(info_ids)))
+                     
+    print(f'Number of train ids in info file: {len(train_ids)}')
+    print(f'Number of test ids in info file: {len(test_ids)}')
+    print(f'Number of price ids in info file: {len(price_ids)}')
 
     # exclude ids not in info file from train and test fasta data and save them to new files 
-    train_ids = [id for id in train_ids if id not in train_ids_not_in_info]
-    test_ids = [id for id in test_ids if id not in test_ids_not_in_info]
-    price_ids = [id for id in price_ids if id not in price_ids_not_in_info]
     SeqIO.write((record for record in SeqIO.parse(train_path, 'fasta') if record.id in train_ids), 'data/train_having_3d.fasta', 'fasta')
     SeqIO.write((record for record in SeqIO.parse(test_path, 'fasta') if record.id in test_ids), 'data/test_having_3d.fasta', 'fasta')
     SeqIO.write((record for record in SeqIO.parse(price_path, 'fasta') if record.id in price_ids), 'data/price_having_3d.fasta', 'fasta')
@@ -186,7 +173,7 @@ def count_protein_number(fasta_file):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Data merging script')
-    parser.add_argument('--pretrain_path', type=str, help='Path to the pretrain data')
+    #parser.add_argument('--pretrain_path', type=str, help='Path to the pretrain data')
     parser.add_argument('--train_path', type=str, help='Path to the train data')
     parser.add_argument('--test_path', type=str, help='Path to the test data')
     parser.add_argument('--price_path', type=str, help='Path to the price data')
@@ -198,7 +185,6 @@ if __name__ == '__main__':
     preprocessing(pretrain_path=args.pretrain_path, train_path=args.train_path, test_path=args.test_path, price_path=args.price_path)
     check_3d_information(train_path=args.train_path, test_path=args.test_path, price_path= args.price_path, info_file_path=args.info_file_path)
 
-    
     # Count the number of proteins in a fasta file using biopython
     count_pretrain = count_protein_number('data/pretrain.fasta')
     count_train = count_protein_number('data/train.fasta')

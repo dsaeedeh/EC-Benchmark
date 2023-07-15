@@ -7,6 +7,10 @@
 - [License](#license)
 
 ## Installation
+1. Clone the repository 
+2. Run download_data.sh
+3. Run extract_coordinates.sh
+4. run data_preprocessing.sh
 
 
 Run the following file to concat fasta files (pretrain.fasta, train.fasta and test.fasta). Be sure no other .fasta files are existed in the data directory
