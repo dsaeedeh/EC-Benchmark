@@ -155,14 +155,15 @@ def check_3d_information(train_path, test_path, price_path, info_file_path):
 
 
 '''
-pretrain: 108857716
-train: 556825
+pretrain: 108857557
+train: 556822
 test: 2601
-all: 109417142
+price: 184
+all: 109417164
 ----------------------------------------
-train with 3d structure: 534096
-test with 3d structure: 1536
-all: 109393348
+Number of train ids with 3d info: 534093
+Number of test ids with 3d info: 1536
+Number of price ids with 3d info: 3
 '''
 def count_protein_number(fasta_file):
     count = 0
@@ -189,20 +190,14 @@ if __name__ == '__main__':
     count_pretrain = count_protein_number('data/pretrain.fasta')
     count_train = count_protein_number('data/train.fasta')
     count_test = count_protein_number('data/test.fasta')
+    count_price = count_protein_number('data/price.fasta')
     count_all = count_protein_number('data/all.fasta')
 
     print(f'pretrain: {count_pretrain}')
     print(f'train: {count_train}')
     print(f'test: {count_test}')
-    print(f'sum: {count_pretrain+count_train+count_test}')
+    print(f'price: {count_price}')
     print(f'all: {count_all}')
-
-    n_train = count_protein_number('data/train_having_3d.fasta')
-    n_test = count_protein_number('data/test_having_3d.fasta')
-    n_price = count_protein_number('data/price_having_3d.fasta')
-    print(f'train with 3d structure: {n_train}')
-    print(f'test with 3d structure: {n_test}')
-    print(f'price with 3d structure: {n_price}')
 
     
 
