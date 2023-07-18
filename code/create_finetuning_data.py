@@ -24,17 +24,15 @@ def create_data_for_finetuning_task(train_ec_path, test_ec_path, train_3d_path, 
     # Step 1
     ids_to_remove = []
     test_ids = list(test['id'])
-    for i in range(cluster.shape[0]):
-        rep = cluster.iloc[i, 0]
+
+    for i in range(clusters.shape[0]):
+        rep = clusters.iloc[i, 0]
         cluster = clusters.iloc[i, 1]
-        temp = []
-        if rep in test_ids and rep not in temp:
-            temp.append(rep)
-        if cluster in test_ids and cluster not in temp:
-            temp.append(cluster)
+        if rep in test_ids or cluster in test_ids:
+            ids_to_remove.append(rep)
+            ids_to_remove.append(cluster)
 
-        ids_to_remove.extend(temp)
-
+    ids_to_remove = list(set(ids_to_remove))
     train = train[~train['id'].isin(ids_to_remove)]
     train.reset_index(drop=True, inplace=True)
     train = train[train['id'].isin(train_3d_id)]
@@ -56,9 +54,13 @@ def create_data_for_finetuning_task(train_ec_path, test_ec_path, train_3d_path, 
     
     train['3d_info'] = train_info_list
     test['3d_info'] = test_info_list
-    train.to_csv('data/train_ec_3d.csv', index=False)
-    test.to_csv('data/test_ec_3d.csv', index=False)
+    train.to_csv('data/cluster-50/train_ec_3d.csv', index=False)
+    test.to_csv('data/cluster-50/test_ec_3d.csv', index=False)
 
+# Create pretraining data
+'''
+1. Find similar sequences in pretrained data based on the clustering result and remove their EC numbers
+'''
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Fine-tuning data creation')
@@ -67,12 +69,11 @@ if __name__ == '__main__':
     parser.add_argument('--train_3d_path', type=str, default='data/train_having_3d.fasta', help='Path to train 3d data')
     parser.add_argument('--test_3d_path', type=str, default='data/test_having_3d.fasta', help='Path to test 3d data')
     parser.add_argument('--info_file_path', type=str, default='data/swissprot_coordinates.json', help='Path to all 3d coordinates file')
-    parser.add_argument('--clustering_path', type=str, default='data/cluster-30/clusterRes_cluster.tsv', help='Path to clustering result file')
+    parser.add_argument('--clustering_path', type=str, default='data/cluster-50/clusterRes_cluster.tsv', help='Path to clustering result file')
     args = parser.parse_args()
 
-    create_data_for_finetuning_task(train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, 
-                                    test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)
-    
+    #create_data_for_finetuning_task(train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)
+   
 
 
 
