@@ -13,24 +13,30 @@ def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
 
 
-def create_data_for_finetuning_task(train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path, clustering_path):
+def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path, clustering_path):
+
     train = pd.read_feather(train_ec_path)
     test = pd.read_feather(test_ec_path)
     train_3d_id = [record.id for record in SeqIO.parse(train_3d_path, 'fasta')]
     test_3d_id = [record.id for record in SeqIO.parse(test_3d_path, 'fasta')]
 
     clusters = pd.read_csv(clustering_path, sep='\t', header=None)
+    # add column names to the clusters dataframe
+    clusters.columns = ['representative', 'member']
+    # concat member values together for each representative
+    clusters = clusters.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+    print('clusters-30 size: ', clusters.shape)
     
     # Step 1
     ids_to_remove = []
     test_ids = list(test['id'])
 
     for i in range(clusters.shape[0]):
-        rep = clusters.iloc[i, 0]
-        cluster = clusters.iloc[i, 1]
-        if rep in test_ids or cluster in test_ids:
-            ids_to_remove.append(rep)
-            ids_to_remove.append(cluster)
+        cluster_list = []
+        cluster_list.append(clusters.iloc[i, 0])
+        cluster_list.extend(clusters.iloc[i, 1].split(','))
+        if len(set(cluster_list).intersection(set(test_ids))) > 0:
+            ids_to_remove.extend(cluster_list)
 
     ids_to_remove = list(set(ids_to_remove))
     train = train[~train['id'].isin(ids_to_remove)]
@@ -54,29 +60,10 @@ def create_data_for_finetuning_task(train_ec_path, test_ec_path, train_3d_path, 
     
     train['3d_info'] = train_info_list
     test['3d_info'] = test_info_list
-    train.to_csv('data/cluster-50/train_ec_3d.csv', index=False)
-    test.to_csv('data/cluster-50/test_ec_3d.csv', index=False)
+    train.to_csv('data/cluster-30/train_ec_3d.csv', index=False)
+    test.to_csv('data/cluster-30/test_ec_3d.csv', index=False)
 
-# Create pretraining data
-'''
-1. Find similar sequences in pretrained data based on the clustering result and remove their EC numbers from the data
-'''
-def create_data_for_pretraining_task(pretrain_ec_path, test_ec_path, clustering_path):
     pretrain = pd.read_feather(pretrain_ec_path)
-    test = pd.read_csv(test_ec_path)
-
-    clusters = pd.read_csv(clustering_path, sep='\t', header=None)
-    ids_to_remove = []
-    test_ids = test['id'].tolist()
-
-    for i in range(clusters.shape[0]):
-        rep = clusters.iloc[i, 0]
-        cluster = clusters.iloc[i, 1]
-        if rep in test_ids or cluster in test_ids:
-            ids_to_remove.append(rep)
-            ids_to_remove.append(cluster)
-
-    ids_to_remove = list(set(ids_to_remove))
     for i in range(pretrain.shape[0]):
         if pretrain.iloc[i, 0] in ids_to_remove:
             pretrain['ec_number'][i] = '-'
@@ -95,6 +82,4 @@ if __name__ == '__main__':
     parser.add_argument('--clustering_path', type=str, default='data/cluster-30/clusterRes_cluster.tsv', help='Path to clustering file')
     args = parser.parse_args()
 
-    create_data_for_finetuning_task(train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)
-    create_data_for_pretraining_task(pretrain_ec_path=args.pretrain_ec_path, test_ec_path=args.test_ec_path, clustering_path=args.clustering_path)
-    
+    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
