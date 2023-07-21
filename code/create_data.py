@@ -12,6 +12,63 @@ import argparse
 def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
 
+def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_path_30):
+    # read cluster files
+    cluster_90 = pd.read_csv(cluster_path_90, sep='\t', header=None)
+    cluster_90.columns = ['representative', 'member']
+    cluster_90 = cluster_90.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+
+    cluster_70 = pd.read_csv(cluster_path_70, sep='\t', header=None)
+    cluster_70.columns = ['representative', 'member']
+    cluster_70 = cluster_70.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+
+    cluster_50 = pd.read_csv(cluster_path_50, sep='\t', header=None)
+    cluster_50.columns = ['representative', 'member']
+    cluster_50 = cluster_50.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+
+    cluster_30 = pd.read_csv(cluster_path_30, sep='\t', header=None)
+    cluster_30.columns = ['representative', 'member']
+    cluster_30 = cluster_30.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+
+    # For cluster-70, for each represaentative, replace each of its members with the members of that member in cluster-90
+    for i in range(cluster_70.shape[0]):
+        mem = []
+        for j in cluster_70.iloc[i, 1].split(','):
+            if j in cluster_90['representative'].values:
+                mem.extend(cluster_90[cluster_90['representative'] == j]['member'].values[0].split(','))
+            else:
+                mem.append(j)
+        mem = list(set(mem))
+        cluster_70.iloc[i, 1] = ','.join(mem)
+    
+    # For cluster-50, for each represaentative, replace each of its members with the members of that member in cluster-70
+    for i in range(cluster_50.shape[0]):
+        mem = []
+        for j in cluster_50.iloc[i, 1].split(','):
+            if j in cluster_70['representative'].values:
+                mem.extend(cluster_70[cluster_70['representative'] == j]['member'].values[0].split(','))
+            else:
+                mem.append(j)
+        mem = list(set(mem))
+        cluster_50.iloc[i, 1] = ','.join(mem)
+    
+    # For cluster-30, for each represaentative, replace each of its members with the members of that member in cluster-50
+    for i in range(cluster_30.shape[0]):
+        mem = []
+        for j in cluster_30.iloc[i, 1].split(','):
+            if j in cluster_50['representative'].values:
+                mem.extend(cluster_50[cluster_50['representative'] == j]['member'].values[0].split(','))
+            else:
+                mem.append(j)
+        mem = list(set(mem))
+        cluster_30.iloc[i, 1] = ','.join(mem)
+    
+    cluster_90.to_csv('data/cluster-90/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+    cluster_70.to_csv('data/cluster-70/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+    cluster_50.to_csv('data/cluster-50/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+    cluster_30.to_csv('data/cluster-30/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+    
+    return cluster_90, cluster_70, cluster_50, cluster_30
 
 def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path, clustering_path):
 
