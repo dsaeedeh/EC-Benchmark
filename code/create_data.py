@@ -13,6 +13,7 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
     cluster_90 = pd.read_csv(cluster_path_90, sep='\t', header=None)
     cluster_90.columns = ['representative', 'member']
     cluster_90 = cluster_90.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+    cluster_90.to_csv('data/cluster-90/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
 
     cluster_70 = pd.read_csv(cluster_path_70, sep='\t', header=None)
     cluster_70.columns = ['representative', 'member']
@@ -27,41 +28,45 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
     cluster_30 = cluster_30.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
 
     # For cluster-70, for each representative, replace each of its members with the members of that member in cluster-90
-    for i in range(cluster_70.shape[0]):
-        mem = []
-        for j in cluster_70.iloc[i, 1].split(','):
-            if j in cluster_90['representative'].values:
-                mem.extend(cluster_90[cluster_90['representative'] == j]['member'].values[0].split(','))
+    representatives_90 = set(cluster_90['representative'].values)
+    for i, row in cluster_70.iterrows():
+        mem = set()
+        for j in row[1].split(','):
+            if j in representatives_90:
+                representative_row = cluster_90[cluster_90['representative'] == j].iloc[0]
+                mem.update(representative_row['member'].split(','))
             else:
-                mem.append(j)
-        mem = list(set(mem))
-        cluster_70.iloc[i, 1] = ','.join(mem)
-    
-    # For cluster-50, for each representative, replace each of its members with the members of that member in cluster-70
-    for i in range(cluster_50.shape[0]):
-        mem = []
-        for j in cluster_50.iloc[i, 1].split(','):
-            if j in cluster_70['representative'].values:
-                mem.extend(cluster_70[cluster_70['representative'] == j]['member'].values[0].split(','))
-            else:
-                mem.append(j)
-        mem = list(set(mem))
-        cluster_50.iloc[i, 1] = ','.join(mem)
-    
-    # For cluster-30, for each representative, replace each of its members with the members of that member in cluster-50
-    for i in range(cluster_30.shape[0]):
-        mem = []
-        for j in cluster_30.iloc[i, 1].split(','):
-            if j in cluster_50['representative'].values:
-                mem.extend(cluster_50[cluster_50['representative'] == j]['member'].values[0].split(','))
-            else:
-                mem.append(j)
-        mem = list(set(mem))
-        cluster_30.iloc[i, 1] = ','.join(mem)
-    
-    cluster_90.to_csv('data/cluster-90/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+                mem.add(j)
+        cluster_70.at[i, 'member'] = ','.join(mem)
+
     cluster_70.to_csv('data/cluster-70/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+
+    # For cluster-50, for each representative, replace each of its members with the members of that member in cluster-70
+    representatives_70 = set(cluster_70['representative'].values)
+    for i, row in cluster_50.iterrows():
+        mem = set()
+        for j in row[1].split(','):
+            if j in representatives_70:
+                representative_row = cluster_70[cluster_70['representative'] == j].iloc[0]
+                mem.update(representative_row['member'].split(','))
+            else:
+                mem.add(j)
+        cluster_50.at[i, 'member'] = ','.join(mem)
+    
     cluster_50.to_csv('data/cluster-50/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+
+    # For cluster-30, for each representative, replace each of its members with the members of that member in cluster-50
+    representatives_50 = set(cluster_50['representative'].values)
+    for i, row in cluster_30.iterrows():
+        mem = set()
+        for j in row[1].split(','):
+            if j in representatives_50:
+                representative_row = cluster_50[cluster_50['representative'] == j].iloc[0]
+                mem.update(representative_row['member'].split(','))
+            else:
+                mem.add(j)
+        cluster_30.at[i, 'member'] = ','.join(mem)
+    
     cluster_30.to_csv('data/cluster-30/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
     
 # Create fine-tuning data
@@ -82,11 +87,7 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
     test_3d_id = [record.id for record in SeqIO.parse(test_3d_path, 'fasta')]
 
     clusters = pd.read_csv(clustering_path, sep='\t', header=None)
-    # add column names to the clusters dataframe
-    clusters.columns = ['representative', 'member']
-    # concat member values together for each representative
-    clusters = clusters.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
-    print('clusters-30 size: ', clusters.shape)
+    print('clusters-90 size: ', clusters.shape)
     
     # Step 1
     ids_to_remove = []
@@ -121,15 +122,18 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
     
     train['3d_info'] = train_info_list
     test['3d_info'] = test_info_list
-    train.to_csv('data/cluster-30/train_ec_3d.csv', index=False)
-    test.to_csv('data/cluster-30/test_ec_3d.csv', index=False)
+    train.to_csv('data/cluster-90/train_ec_3d.csv', index=False)
+    print('train-90 size: ', train.shape)
+    test.to_csv('data/cluster-90/test_ec_3d.csv', index=False)
+    print('test-90 size: ', test.shape)
 
     pretrain = pd.read_feather(pretrain_ec_path)
     for i in range(pretrain.shape[0]):
         if pretrain.iloc[i, 0] in ids_to_remove:
             pretrain['ec_number'][i] = '-'
 
-    pretrain.to_csv('data/cluster-30/pretrain_ec.csv', index=False)
+    pretrain.to_csv('data/cluster-90/pretrain_ec.csv', index=False)
+    print('pretrain-90 size: ', pretrain.shape)
 
 
 if __name__ == '__main__':
@@ -140,8 +144,8 @@ if __name__ == '__main__':
     parser.add_argument('--train_3d_path', type=str, default='data/train_having_3d.fasta', help='Path to train 3d data')
     parser.add_argument('--test_3d_path', type=str, default='data/test_having_3d.fasta', help='Path to test 3d data')
     parser.add_argument('--info_file_path', type=str, default='data/swissprot_coordinates.json', help='Path to all 3d coordinates file')
-    parser.add_argument('--clustering_path', type=str, default='data/cluster-30/clusterRes_cluster.tsv', help='Path to clustering file')
+    parser.add_argument('--clustering_path', type=str, default='data/cluster-90/clusterRes_cluster_final.tsv', help='Path to clustering file')
     args = parser.parse_args()
 
-    create_clusters(cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
-    #create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
+    #create_clusters(cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
+    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    

@@ -16,7 +16,7 @@ for i in range(pretrain_30.shape[0]):
     all_ecs.extend(pretrain_30['ec_number'][i].split(','))
 del pretrain_30
 
-print('30 ec number of pretrain: ', len(list(set(all_ecs))))
+print('ec number of pretrain: ', len(list(set(all_ecs))))
 
 # Save the unique EC numbers with their numerical representation in a csv file
 unique_ecs = list(set(all_ecs))
@@ -29,7 +29,7 @@ for i in range(pretrain_50.shape[0]):
     all_ecs.extend(pretrain_50['ec_number'][i].split(','))
 del pretrain_50
 
-print('50 ec number of pretrain: ', len(list(set(all_ecs))))
+print('ec number of pretrain: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
@@ -40,7 +40,7 @@ for i in range(pretrain_70.shape[0]):
     all_ecs.extend(pretrain_70['ec_number'][i].split(','))
 del pretrain_70
 
-print('70 ec number of pretrain: ', len(list(set(all_ecs))))
+print('ec number of pretrain: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
@@ -51,7 +51,7 @@ for i in range(pretrain_90.shape[0]):
     all_ecs.extend(pretrain_90['ec_number'][i].split(','))
 del pretrain_90
 
-print('90 ec number of pretrain: ', len(list(set(all_ecs))))
+print('ec number of pretrain: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
@@ -63,7 +63,7 @@ for i in range(train_30.shape[0]):
     all_ecs.extend(train_30['ec_number'][i].split(','))
 del train_30
 
-print('30 ec number of train: ', len(list(set(all_ecs))))
+print('ec number of train: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
@@ -74,7 +74,7 @@ for i in range(train_50.shape[0]):
     all_ecs.extend(train_50['ec_number'][i].split(','))
 del train_50
 
-print('50 ec number of train: ', len(list(set(all_ecs))))
+print('ec number of train: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
@@ -85,7 +85,7 @@ for i in range(train_70.shape[0]):
     all_ecs.extend(train_70['ec_number'][i].split(','))
 del train_70
 
-print('70 ec number of train: ', len(list(set(all_ecs))))
+print('ec number of train: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
@@ -96,7 +96,7 @@ for i in range(train_90.shape[0]):
     all_ecs.extend(train_90['ec_number'][i].split(','))
 del train_90
 
-print('90 ec number of train: ', len(list(set(all_ecs))))
+print('ec number of train: ', len(list(set(all_ecs))))
 unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
