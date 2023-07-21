@@ -4,11 +4,7 @@ import fasta2csv.converter
 from Bio import SeqIO
 import argparse
 
-# Create fine-tuning data
-'''
-1. remove similar sequences from train data based on the clustering result
-2. Add 3d information for train and test data
-'''
+
 def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
 
@@ -30,7 +26,7 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
     cluster_30.columns = ['representative', 'member']
     cluster_30 = cluster_30.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
 
-    # For cluster-70, for each represaentative, replace each of its members with the members of that member in cluster-90
+    # For cluster-70, for each representative, replace each of its members with the members of that member in cluster-90
     for i in range(cluster_70.shape[0]):
         mem = []
         for j in cluster_70.iloc[i, 1].split(','):
@@ -41,7 +37,7 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
         mem = list(set(mem))
         cluster_70.iloc[i, 1] = ','.join(mem)
     
-    # For cluster-50, for each represaentative, replace each of its members with the members of that member in cluster-70
+    # For cluster-50, for each representative, replace each of its members with the members of that member in cluster-70
     for i in range(cluster_50.shape[0]):
         mem = []
         for j in cluster_50.iloc[i, 1].split(','):
@@ -52,7 +48,7 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
         mem = list(set(mem))
         cluster_50.iloc[i, 1] = ','.join(mem)
     
-    # For cluster-30, for each represaentative, replace each of its members with the members of that member in cluster-50
+    # For cluster-30, for each representative, replace each of its members with the members of that member in cluster-50
     for i in range(cluster_30.shape[0]):
         mem = []
         for j in cluster_30.iloc[i, 1].split(','):
@@ -68,7 +64,15 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
     cluster_50.to_csv('data/cluster-50/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
     cluster_30.to_csv('data/cluster-30/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
     
-    return cluster_90, cluster_70, cluster_50, cluster_30
+# Create fine-tuning data
+'''
+1. remove similar sequences from train data based on the clustering result
+2. Add 3d information for train and test data
+'''
+# Create pretrain data
+'''
+remove EC numbers from pretrain data for the sequences that are similar to the sequences in test data based on the clustering result
+'''
 
 def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path, clustering_path):
 
@@ -139,4 +143,5 @@ if __name__ == '__main__':
     parser.add_argument('--clustering_path', type=str, default='data/cluster-30/clusterRes_cluster.tsv', help='Path to clustering file')
     args = parser.parse_args()
 
-    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
+    create_clusters(cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
+    #create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
