@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 pretrain_30 = pd.read_csv('data/cluster-30/pretrain_ec.csv')
 pretrain_50 = pd.read_csv('data/cluster-50/pretrain_ec.csv')
@@ -113,4 +114,6 @@ unique_ecs = list(set(all_ecs))
 unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
 unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
 unique_ecs.to_csv('data/cluster-30/unique_ecs_test.csv', index=False)
+
+
 
