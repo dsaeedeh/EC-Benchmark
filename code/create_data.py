@@ -67,40 +67,29 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
 
     cluster_paths = ['data/cluster-100', 'data/cluster-90', 'data/cluster-70', 'data/cluster-50', 'data/cluster-30']
     t_list = [1.0, 0.9, 0.7, 0.5, 0.3]
+    # A dictionary to store threshold and its corresponding path
+    threshold_paths = dict(zip(t_list, cluster_paths))
     # make ids_to_remove global list
     ids_to_remove = []
 
-    # A dictionary to store threshold and its corresponding path
-    threshold_paths = dict(zip(t_list, cluster_paths))
     auto = ahocorasick.Automaton()
     for substr in test_ids:
         auto.add_word(substr, substr)
-    auto.make_automaton()
-    
-    def process_clusters(path, ids_to_remove, auto):
-        clustering_path = f'{path}/clusterRes_cluster_final.tsv'
-        clusters = pd.read_csv(clustering_path, sep='\t', header=None)
-        for i in range(clusters.shape[0]):
-            cluster_list = [clusters.iloc[i, 0]]
-            cluster_list.extend(clusters.iloc[i, 1].split(','))
-            for astr in cluster_list:
-                if auto.exists(astr):
-                    ids_to_remove.extend(cluster_list)
-        del clusters
+    auto.make_automaton()        
 
     # Process clusters for each threshold
     for threshold in t_list:
         path = threshold_paths[threshold]
-        if threshold == 1.0:
-            process_clusters(path, ids_to_remove, auto)
-        elif threshold == 0.9:
-            process_clusters(path, ids_to_remove, auto)
-        elif threshold == 0.7:
-            process_clusters(path, ids_to_remove, auto)
-        elif threshold == 0.5:
-            process_clusters(path, ids_to_remove, auto)
-        else:
-            process_clusters(path, ids_to_remove, auto)
+        clustering_path = f'{path}/clusterRes_cluster_final.tsv'
+        clusters = pd.read_csv(clustering_path, sep='\t', header=None)
+        for i in range(clusters.shape[0]):
+            cluster_list = clusters.iloc[i, 1].split(',')
+            for astr in cluster_list:
+                if auto.exists(astr):
+                    ids_to_remove.extend(cluster_list)
+                    break
+        del clusters
+        
   
         # Step 1
         ids_to_remove = list(set(ids_to_remove))
