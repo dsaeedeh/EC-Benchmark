@@ -3,7 +3,12 @@ import json
 import fasta2csv.converter
 from Bio import SeqIO
 import argparse
+import psutil
 
+
+def monitor_ram_usage():
+    virtual_memory = psutil.virtual_memory()
+    print(f"RAM Usage: {virtual_memory.percent}%")
 
 def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
@@ -144,3 +149,5 @@ if __name__ == '__main__':
 
     #create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
     create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path)    
+    monitor_ram_usage()
+    
