@@ -4,6 +4,8 @@ import fasta2csv.converter
 from Bio import SeqIO
 import argparse
 import psutil
+import ahocorasick
+import numpy as np
 
 
 def monitor_ram_usage():
@@ -74,12 +76,16 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
     def process_clusters(path, ids_to_remove, test_ids):
         clustering_path = f'{path}/clusterRes_cluster_final.tsv'
         clusters = pd.read_csv(clustering_path, sep='\t', header=None)
+        auto = ahocorasick.Automaton()
+        for substr in test_ids:
+            auto.add_word(substr, substr)
+        auto.make_automaton()
         for i in range(clusters.shape[0]):
-            cluster_list = []
-            cluster_list.append(clusters.iloc[i, 0])
+            cluster_list = [clusters.iloc[i, 0]]
             cluster_list.extend(clusters.iloc[i, 1].split(','))
-            if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                ids_to_remove.extend(cluster_list)
+            for astr in cluster_list:
+                if auto.exists(astr):
+                    ids_to_remove.extend(cluster_list)
         del clusters
 
     # Process clusters for each threshold
@@ -99,42 +105,72 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
         # Step 1
         ids_to_remove = list(set(ids_to_remove))
         print('Number of ids to remove: ', len(ids_to_remove))
-        train = train[~train['id'].isin(ids_to_remove)]
-        train.reset_index(drop=True, inplace=True)
-        train = train[train['id'].isin(train_3d_id)]
-        train.reset_index(drop=True, inplace=True)
-        test = test[test['id'].isin(test_3d_id)]
-        test.reset_index(drop=True, inplace=True)
+        train_new = train[~train['id'].isin(ids_to_remove)]
+        train_new.reset_index(drop=True, inplace=True)
+        train_new = train[train['id'].isin(train_3d_id)]
+        train_new.reset_index(drop=True, inplace=True)
+        test_new = test[test['id'].isin(test_3d_id)]
+        test_new.reset_index(drop=True, inplace=True)
         
         # Step 2
         train_info_list = []
         test_info_list = []
         
-        for i in range(train.shape[0]):
-            if train.iloc[i, 0] in info.keys():
-                train_info_list.append(info[train.iloc[i, 0]])
-        for i in range(test.shape[0]):
-            if test.iloc[i, 0] in info.keys():
-                test_info_list.append(info[test.iloc[i, 0]])
+        for i in range(train_new.shape[0]):
+            if train_new.iloc[i, 0] in info.keys():
+                train_info_list.append(info[train_new.iloc[i, 0]])
+        for i in range(test_new.shape[0]):
+            if test_new.iloc[i, 0] in info.keys():
+                test_info_list.append(info[test_new.iloc[i, 0]])
     
-        train['3d_info'] = train_info_list
-        test['3d_info'] = test_info_list
+        train_new['3d_info'] = train_info_list
+        test_new['3d_info'] = test_info_list
         train_path = path + '/train_ec_3d.csv'
-        train.to_csv(train_path, index=False)
+        train_new.to_csv(train_path, index=False)
         print('train size: ', train.shape)
         test_path = path + '/test_ec_3d.csv'
-        test.to_csv(test_path, index=False)
+        test_new.to_csv(test_path, index=False)
         print('test size: ', test.shape)
-        del train, test, train_3d_id, test_3d_id, train_info_list, test_info_list
 
-        for i in range(pretrain.shape[0]):
-            if pretrain.iloc[i, 0] in ids_to_remove:
-                pretrain['ec_number'][i] = '-'
+        # Save the unique EC numbers with their numerical representation in a csv file
+        all_ecs = []
+        for i in range(train_new.shape[0]):
+            all_ecs.extend(train_new['ec_number'][i].split(','))
+        print('ec number of train: ', len(list(set(all_ecs))))
+        unique_ecs = list(set(all_ecs))
+        unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
+        unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
+        unique_ecs_path = path + '/unique_ecs_train.csv'
+        unique_ecs.to_csv(unique_ecs_path, index=False)
 
+        all_ecs = []
+        for i in range(test_new.shape[0]):
+            all_ecs.extend(test_new['ec_number'][i].split(','))
+        print('ec number of test: ', len(list(set(all_ecs))))
+        unique_ecs = list(set(all_ecs))
+        unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
+        unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
+        unique_ecs_path = path + '/unique_ecs_test.csv'
+        unique_ecs.to_csv(unique_ecs_path, index=False)
+
+        del train_new, test_new, train_info_list, test_info_list
+
+        # Use boolean indexing to update the 'ec_number' column where the condition is met
+        pretrain.loc[pretrain.iloc[:, 0].isin(ids_to_remove), 'ec_number'] = '-'
         pretrain_path = path + '/pretrain_ec.csv'
         pretrain.to_csv(pretrain_path, index=False)
-        print('pretrain size: ', pretrain.shape)
-        del pretrain
+        # print number of unique EC numbers in pretrain data
+        all_ecs = []
+        for i in range(pretrain.shape[0]):
+            all_ecs.extend(pretrain['ec_number'][i].split(','))
+        print('ec number of pretrain: ', len(list(set(all_ecs))))
+        # Save the unique EC numbers with their numerical representation in a csv file
+        unique_ecs = list(set(all_ecs))
+        unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
+        unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
+        unique_ecs_path = path + '/unique_ecs_pretrain.csv'
+        unique_ecs.to_csv(unique_ecs_path, index=False)
+
 
 
 if __name__ == '__main__':
@@ -150,4 +186,3 @@ if __name__ == '__main__':
     #create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
     create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path)    
     monitor_ram_usage()
-    
