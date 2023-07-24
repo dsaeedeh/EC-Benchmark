@@ -57,83 +57,43 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
     with open(info_file_path, 'r') as f:
             info = json.load(f)
 
+
     cluster_paths = ['data/cluster-100', 'data/cluster-90', 'data/cluster-70', 'data/cluster-50', 'data/cluster-30']
     t_list = [1.0, 0.9, 0.7, 0.5, 0.3]
+    # make ids_to_remove global list
     ids_to_remove = []
 
+    # A dictionary to store threshold and its corresponding path
+    threshold_paths = dict(zip(t_list, cluster_paths))
+    
+    def process_clusters(path, ids_to_remove, test_ids):
+        clustering_path = f'{path}/clusterRes_cluster_final.tsv'
+        clusters = pd.read_csv(clustering_path, sep='\t', header=None)
+        for i in range(clusters.shape[0]):
+            cluster_list = []
+            cluster_list.append(clusters.iloc[i, 0])
+            cluster_list.extend(clusters.iloc[i, 1].split(','))
+            if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                ids_to_remove.extend(cluster_list)
+        del clusters
+
+    # Process clusters for each threshold
     for threshold in t_list:
+        path = threshold_paths[threshold]
         if threshold == 1.0:
-            path = cluster_paths[0]
-            ids_to_remove_100 = []
-            clustering_path = path + '/clusterRes_cluster_final.tsv'
-            clusters_100 = pd.read_csv(clustering_path, sep='\t', header=None)
-            for i in range(clusters_100.shape[0]):
-                cluster_list = []
-                cluster_list.append(clusters_100.iloc[i, 0])
-                cluster_list.extend(clusters_100.iloc[i, 1].split(','))
-                if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                    ids_to_remove_100.extend(cluster_list)
-            ids_to_remove.extend(ids_to_remove_100)
-            del clusters_100
-
+            process_clusters(path, ids_to_remove, test_ids)
         elif threshold == 0.9:
-            path = cluster_paths[1]
-            ids_to_remove_90 = []
-            clustering_path = path + '/clusterRes_cluster_final.tsv'
-            clusters_90 = pd.read_csv(clustering_path, sep='\t', header=None)
-            for i in range(clusters_90.shape[0]):
-                cluster_list = []
-                cluster_list.append(clusters_90.iloc[i, 0])
-                cluster_list.extend(clusters_90.iloc[i, 1].split(','))
-                if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                    ids_to_remove_90.extend(cluster_list)
-            ids_to_remove.extend(ids_to_remove_90)
-            del clusters_90
-
+            process_clusters(path, ids_to_remove, test_ids)
         elif threshold == 0.7:
-            path = cluster_paths[2]
-            ids_to_remove_70 = []
-            clustering_path = path + '/clusterRes_cluster_final.tsv'
-            clusters_70 = pd.read_csv(clustering_path, sep='\t', header=None)
-            for i in range(clusters_70.shape[0]):
-                cluster_list = []
-                cluster_list.append(clusters_70.iloc[i, 0])
-                cluster_list.extend(clusters_70.iloc[i, 1].split(','))
-                if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                    ids_to_remove_70.extend(cluster_list)
-            ids_to_remove.extend(ids_to_remove_70)
-            del clusters_70
-
+            process_clusters(path, ids_to_remove, test_ids)
         elif threshold == 0.5:
-            path = cluster_paths[3]
-            ids_to_remove_50 = []
-            clustering_path = path + '/clusterRes_cluster_final.tsv'
-            clusters_50 = pd.read_csv(clustering_path, sep='\t', header=None)
-            for i in range(clusters_50.shape[0]):
-                cluster_list = []
-                cluster_list.append(clusters_50.iloc[i, 0])
-                cluster_list.extend(clusters_50.iloc[i, 1].split(','))
-                if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                    ids_to_remove_50.extend(cluster_list)
-            ids_to_remove.extend(ids_to_remove_50)
-            del clusters_50
-
+            process_clusters(path, ids_to_remove, test_ids)
         else:
-            path = cluster_paths[4]
-            ids_to_remove_30 = []
-            clustering_path = path + '/clusterRes_cluster_final.tsv'
-            clusters_30 = pd.read_csv(clustering_path, sep='\t', header=None)
-            for i in range(clusters_30.shape[0]):
-                cluster_list = []
-                cluster_list.append(clusters_30.iloc[i, 0])
-                cluster_list.extend(clusters_30.iloc[i, 1].split(','))
-                if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                    ids_to_remove_30.extend(cluster_list)
-            ids_to_remove.extend(ids_to_remove_30)
-            del clusters_30
-            
+            process_clusters(path, ids_to_remove, test_ids)
+  
         # Step 1
         ids_to_remove = list(set(ids_to_remove))
+        print('Number of ids to remove: ', len(ids_to_remove))
         train = train[~train['id'].isin(ids_to_remove)]
         train.reset_index(drop=True, inplace=True)
         train = train[train['id'].isin(train_3d_id)]
