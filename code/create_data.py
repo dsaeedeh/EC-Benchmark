@@ -50,6 +50,7 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
 
     train = pd.read_feather(train_ec_path)
     test = pd.read_feather(test_ec_path)
+    test_ids = list(test['id'])
     pretrain = pd.read_feather(pretrain_ec_path)
     train_3d_id = [record.id for record in SeqIO.parse(train_3d_path, 'fasta')]
     test_3d_id = [record.id for record in SeqIO.parse(test_3d_path, 'fasta')]
@@ -63,52 +64,75 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
     for threshold in t_list:
         if threshold == 1.0:
             path = cluster_paths[0]
+            ids_to_remove_100 = []
             clustering_path = path + '/clusterRes_cluster_final.tsv'
             clusters_100 = pd.read_csv(clustering_path, sep='\t', header=None)
-            clusters = clusters_100
+            for i in range(clusters_100.shape[0]):
+                cluster_list = []
+                cluster_list.append(clusters_100.iloc[i, 0])
+                cluster_list.extend(clusters_100.iloc[i, 1].split(','))
+                if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                    ids_to_remove_100.extend(cluster_list)
+            ids_to_remove.extend(ids_to_remove_100)
+            del clusters_100
+
         elif threshold == 0.9:
-            # append both 100 and 90 clusters and remove duplicates
             path = cluster_paths[1]
+            ids_to_remove_90 = []
             clustering_path = path + '/clusterRes_cluster_final.tsv'
             clusters_90 = pd.read_csv(clustering_path, sep='\t', header=None)
-            clusters_90 = pd.concat([clusters_90, clusters_100])
-            clusters_90.drop_duplicates(inplace=True)
-            clusters = clusters_90
+            for i in range(clusters_90.shape[0]):
+                cluster_list = []
+                cluster_list.append(clusters_90.iloc[i, 0])
+                cluster_list.extend(clusters_90.iloc[i, 1].split(','))
+                if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                    ids_to_remove_90.extend(cluster_list)
+            ids_to_remove.extend(ids_to_remove_90)
+            del clusters_90
+
         elif threshold == 0.7:
-            # append 100, 90 and 70 clusters and remove duplicates
             path = cluster_paths[2]
+            ids_to_remove_70 = []
             clustering_path = path + '/clusterRes_cluster_final.tsv'
             clusters_70 = pd.read_csv(clustering_path, sep='\t', header=None)
-            clusters_70 = pd.concat([clusters_70, clusters_90])
-            clusters_70.drop_duplicates(inplace=True)
-            clusters = clusters_70
+            for i in range(clusters_70.shape[0]):
+                cluster_list = []
+                cluster_list.append(clusters_70.iloc[i, 0])
+                cluster_list.extend(clusters_70.iloc[i, 1].split(','))
+                if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                    ids_to_remove_70.extend(cluster_list)
+            ids_to_remove.extend(ids_to_remove_70)
+            del clusters_70
+
         elif threshold == 0.5:
-            # append 100, 90, 70 and 50 clusters and remove duplicates
             path = cluster_paths[3]
+            ids_to_remove_50 = []
             clustering_path = path + '/clusterRes_cluster_final.tsv'
             clusters_50 = pd.read_csv(clustering_path, sep='\t', header=None)
-            clusters_50 = pd.concat([clusters_50, clusters_70])
-            clusters_50.drop_duplicates(inplace=True)
-            clusters = clusters_50
+            for i in range(clusters_50.shape[0]):
+                cluster_list = []
+                cluster_list.append(clusters_50.iloc[i, 0])
+                cluster_list.extend(clusters_50.iloc[i, 1].split(','))
+                if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                    ids_to_remove_50.extend(cluster_list)
+            ids_to_remove.extend(ids_to_remove_50)
+            del clusters_50
+
         else:
-            # append 100, 90, 70, 50 and 30 clusters and remove duplicates
             path = cluster_paths[4]
+            ids_to_remove_30 = []
             clustering_path = path + '/clusterRes_cluster_final.tsv'
             clusters_30 = pd.read_csv(clustering_path, sep='\t', header=None)
-            clusters_30 = pd.concat([clusters_30, clusters_50])
-            clusters_30.drop_duplicates(inplace=True)
-            clusters = clusters_30
+            for i in range(clusters_30.shape[0]):
+                cluster_list = []
+                cluster_list.append(clusters_30.iloc[i, 0])
+                cluster_list.extend(clusters_30.iloc[i, 1].split(','))
+                if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                    ids_to_remove_30.extend(cluster_list)
+            ids_to_remove.extend(ids_to_remove_30)
+            del clusters_30
             
         # Step 1
-        test_ids = list(test['id'])
-
-        for i in range(clusters.shape[0]):
-            cluster_list = []
-            cluster_list.append(clusters.iloc[i, 0])
-            cluster_list.extend(clusters.iloc[i, 1].split(','))
-            if len(set(cluster_list).intersection(set(test_ids))) > 0:
-                ids_to_remove.extend(cluster_list)
-
         ids_to_remove = list(set(ids_to_remove))
         train = train[~train['id'].isin(ids_to_remove)]
         train.reset_index(drop=True, inplace=True)
