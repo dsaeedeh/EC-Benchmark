@@ -46,40 +46,81 @@ def create_clusters(cluster_path_100, cluster_path_90, cluster_path_70, cluster_
 remove EC numbers from pretrain data for the sequences that are similar to the sequences in test data based on the clustering result
 '''
 
-def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path, clustering_path):
+def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path):
 
     train = pd.read_feather(train_ec_path)
     test = pd.read_feather(test_ec_path)
+    pretrain = pd.read_feather(pretrain_ec_path)
     train_3d_id = [record.id for record in SeqIO.parse(train_3d_path, 'fasta')]
     test_3d_id = [record.id for record in SeqIO.parse(test_3d_path, 'fasta')]
-
-    clusters = pd.read_csv(clustering_path, sep='\t', header=None)
-    print('clusters-90 size: ', clusters.shape)
-    
-    # Step 1
-    ids_to_remove = []
-    test_ids = list(test['id'])
-
-    for i in range(clusters.shape[0]):
-        cluster_list = []
-        cluster_list.append(clusters.iloc[i, 0])
-        cluster_list.extend(clusters.iloc[i, 1].split(','))
-        if len(set(cluster_list).intersection(set(test_ids))) > 0:
-            ids_to_remove.extend(cluster_list)
-
-    ids_to_remove = list(set(ids_to_remove))
-    train = train[~train['id'].isin(ids_to_remove)]
-    train.reset_index(drop=True, inplace=True)
-    train = train[train['id'].isin(train_3d_id)]
-    train.reset_index(drop=True, inplace=True)
-    test = test[test['id'].isin(test_3d_id)]
-    test.reset_index(drop=True, inplace=True)
-    
-    # Step 2
-    train_info_list = []
-    test_info_list = []
     with open(info_file_path, 'r') as f:
-        info = json.load(f)
+            info = json.load(f)
+
+    cluster_paths = ['data/cluster-100', 'data/cluster-90', 'data/cluster-70', 'data/cluster-50', 'data/cluster-30']
+    t_list = [1.0, 0.9, 0.7, 0.5, 0.3]
+    ids_to_remove = []
+
+    for threshold in t_list:
+        if threshold == 1.0:
+            path = cluster_paths[0]
+            clustering_path = path + '/clusterRes_cluster_final.tsv'
+            clusters_100 = pd.read_csv(clustering_path, sep='\t', header=None)
+            clusters = clusters_100
+        elif threshold == 0.9:
+            # append both 100 and 90 clusters and remove duplicates
+            path = cluster_paths[1]
+            clustering_path = path + '/clusterRes_cluster_final.tsv'
+            clusters_90 = pd.read_csv(clustering_path, sep='\t', header=None)
+            clusters_90 = pd.concat([clusters_90, clusters_100])
+            clusters_90.drop_duplicates(inplace=True)
+            clusters = clusters_90
+        elif threshold == 0.7:
+            # append 100, 90 and 70 clusters and remove duplicates
+            path = cluster_paths[2]
+            clustering_path = path + '/clusterRes_cluster_final.tsv'
+            clusters_70 = pd.read_csv(clustering_path, sep='\t', header=None)
+            clusters_70 = pd.concat([clusters_70, clusters_90])
+            clusters_70.drop_duplicates(inplace=True)
+            clusters = clusters_70
+        elif threshold == 0.5:
+            # append 100, 90, 70 and 50 clusters and remove duplicates
+            path = cluster_paths[3]
+            clustering_path = path + '/clusterRes_cluster_final.tsv'
+            clusters_50 = pd.read_csv(clustering_path, sep='\t', header=None)
+            clusters_50 = pd.concat([clusters_50, clusters_70])
+            clusters_50.drop_duplicates(inplace=True)
+            clusters = clusters_50
+        else:
+            # append 100, 90, 70, 50 and 30 clusters and remove duplicates
+            path = cluster_paths[4]
+            clustering_path = path + '/clusterRes_cluster_final.tsv'
+            clusters_30 = pd.read_csv(clustering_path, sep='\t', header=None)
+            clusters_30 = pd.concat([clusters_30, clusters_50])
+            clusters_30.drop_duplicates(inplace=True)
+            clusters = clusters_30
+            
+        # Step 1
+        test_ids = list(test['id'])
+
+        for i in range(clusters.shape[0]):
+            cluster_list = []
+            cluster_list.append(clusters.iloc[i, 0])
+            cluster_list.extend(clusters.iloc[i, 1].split(','))
+            if len(set(cluster_list).intersection(set(test_ids))) > 0:
+                ids_to_remove.extend(cluster_list)
+
+        ids_to_remove = list(set(ids_to_remove))
+        train = train[~train['id'].isin(ids_to_remove)]
+        train.reset_index(drop=True, inplace=True)
+        train = train[train['id'].isin(train_3d_id)]
+        train.reset_index(drop=True, inplace=True)
+        test = test[test['id'].isin(test_3d_id)]
+        test.reset_index(drop=True, inplace=True)
+        
+        # Step 2
+        train_info_list = []
+        test_info_list = []
+        
         for i in range(train.shape[0]):
             if train.iloc[i, 0] in info.keys():
                 train_info_list.append(info[train.iloc[i, 0]])
@@ -87,20 +128,24 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
             if test.iloc[i, 0] in info.keys():
                 test_info_list.append(info[test.iloc[i, 0]])
     
-    train['3d_info'] = train_info_list
-    test['3d_info'] = test_info_list
-    train.to_csv('data/cluster-90/train_ec_3d.csv', index=False)
-    print('train-90 size: ', train.shape)
-    test.to_csv('data/cluster-90/test_ec_3d.csv', index=False)
-    print('test-90 size: ', test.shape)
+        train['3d_info'] = train_info_list
+        test['3d_info'] = test_info_list
+        train_path = path + '/train_ec_3d.csv'
+        train.to_csv(train_path, index=False)
+        print('train size: ', train.shape)
+        test_path = path + '/test_ec_3d.csv'
+        test.to_csv(test_path, index=False)
+        print('test size: ', test.shape)
+        del train, test, train_3d_id, test_3d_id, train_info_list, test_info_list
 
-    pretrain = pd.read_feather(pretrain_ec_path)
-    for i in range(pretrain.shape[0]):
-        if pretrain.iloc[i, 0] in ids_to_remove:
-            pretrain['ec_number'][i] = '-'
+        for i in range(pretrain.shape[0]):
+            if pretrain.iloc[i, 0] in ids_to_remove:
+                pretrain['ec_number'][i] = '-'
 
-    pretrain.to_csv('data/cluster-90/pretrain_ec.csv', index=False)
-    print('pretrain-90 size: ', pretrain.shape)
+        pretrain_path = path + '/pretrain_ec.csv'
+        pretrain.to_csv(pretrain_path, index=False)
+        print('pretrain size: ', pretrain.shape)
+        del pretrain
 
 
 if __name__ == '__main__':
@@ -111,8 +156,7 @@ if __name__ == '__main__':
     parser.add_argument('--train_3d_path', type=str, default='data/train_having_3d.fasta', help='Path to train 3d data')
     parser.add_argument('--test_3d_path', type=str, default='data/test_having_3d.fasta', help='Path to test 3d data')
     parser.add_argument('--info_file_path', type=str, default='data/swissprot_coordinates.json', help='Path to all 3d coordinates file')
-    parser.add_argument('--clustering_path', type=str, default='data/cluster-90/clusterRes_cluster_final.tsv', help='Path to clustering file')
     args = parser.parse_args()
 
-    create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
-    #create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
+    #create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
+    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path)    
