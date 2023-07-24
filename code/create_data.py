@@ -8,8 +8,13 @@ import argparse
 def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
 
-def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_path_30):
+def create_clusters(cluster_path_100, cluster_path_90, cluster_path_70, cluster_path_50, cluster_path_30):
     # read cluster files
+    cluster_100 = pd.read_csv(cluster_path_100, sep='\t', header=None)  
+    cluster_100.columns = ['representative', 'member']
+    cluster_100 = cluster_100.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+    cluster_100.to_csv('data/cluster-100/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
+
     cluster_90 = pd.read_csv(cluster_path_90, sep='\t', header=None)
     cluster_90.columns = ['representative', 'member']
     cluster_90 = cluster_90.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
@@ -18,57 +23,19 @@ def create_clusters(cluster_path_90, cluster_path_70, cluster_path_50, cluster_p
     cluster_70 = pd.read_csv(cluster_path_70, sep='\t', header=None)
     cluster_70.columns = ['representative', 'member']
     cluster_70 = cluster_70.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+    cluster_70.to_csv('data/cluster-70/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
 
     cluster_50 = pd.read_csv(cluster_path_50, sep='\t', header=None)
     cluster_50.columns = ['representative', 'member']
     cluster_50 = cluster_50.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
+    cluster_50.to_csv('data/cluster-50/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
 
     cluster_30 = pd.read_csv(cluster_path_30, sep='\t', header=None)
     cluster_30.columns = ['representative', 'member']
     cluster_30 = cluster_30.groupby('representative')['member'].apply(lambda x: ','.join(x)).reset_index()
-
-    # For cluster-70, for each representative, replace each of its members with the members of that member in cluster-90
-    representatives_90 = set(cluster_90['representative'].values)
-    for i, row in cluster_70.iterrows():
-        mem = set()
-        for j in row[1].split(','):
-            if j in representatives_90:
-                representative_row = cluster_90[cluster_90['representative'] == j].iloc[0]
-                mem.update(representative_row['member'].split(','))
-            else:
-                mem.add(j)
-        cluster_70.at[i, 'member'] = ','.join(mem)
-
-    cluster_70.to_csv('data/cluster-70/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
-
-    # For cluster-50, for each representative, replace each of its members with the members of that member in cluster-70
-    representatives_70 = set(cluster_70['representative'].values)
-    for i, row in cluster_50.iterrows():
-        mem = set()
-        for j in row[1].split(','):
-            if j in representatives_70:
-                representative_row = cluster_70[cluster_70['representative'] == j].iloc[0]
-                mem.update(representative_row['member'].split(','))
-            else:
-                mem.add(j)
-        cluster_50.at[i, 'member'] = ','.join(mem)
-    
-    cluster_50.to_csv('data/cluster-50/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
-
-    # For cluster-30, for each representative, replace each of its members with the members of that member in cluster-50
-    representatives_50 = set(cluster_50['representative'].values)
-    for i, row in cluster_30.iterrows():
-        mem = set()
-        for j in row[1].split(','):
-            if j in representatives_50:
-                representative_row = cluster_50[cluster_50['representative'] == j].iloc[0]
-                mem.update(representative_row['member'].split(','))
-            else:
-                mem.add(j)
-        cluster_30.at[i, 'member'] = ','.join(mem)
-    
     cluster_30.to_csv('data/cluster-30/clusterRes_cluster_final.tsv', sep='\t', index=False, header=False)
-    
+
+             
 # Create fine-tuning data
 '''
 1. remove similar sequences from train data based on the clustering result
@@ -147,5 +114,5 @@ if __name__ == '__main__':
     parser.add_argument('--clustering_path', type=str, default='data/cluster-90/clusterRes_cluster_final.tsv', help='Path to clustering file')
     args = parser.parse_args()
 
-    #create_clusters(cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
-    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
+    create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
+    #create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, clustering_path=args.clustering_path)    
