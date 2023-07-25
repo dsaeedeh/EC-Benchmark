@@ -9,8 +9,7 @@ import numpy as np
 
 
 def monitor_ram_usage():
-    virtual_memory = psutil.virtual_memory()
-    print(f"RAM Usage: {virtual_memory.percent}%")
+    print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
 
 def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
