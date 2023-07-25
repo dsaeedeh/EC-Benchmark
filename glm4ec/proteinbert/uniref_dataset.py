@@ -3,15 +3,17 @@ import pandas as pd
 import h5py
 import shared_utils.util as sh
 import csv
-
+import os
+import argparse
 
 def create_h5_dataset(data_path, output_h5_file_path, records_limit = None, save_chunk_size=10000, verbose=True, log_progress_every=10000):
-    data = pd.read_csv(data_path)
+    data_path_c = data_path + '/pretrain_ec.csv'
+    data = pd.read_csv(data_path_c)
 
     n_seqs = data.shape[0]
     annotation = []
 
-    for j in data['ec_number'].str.split("; |,"):
+    for j in data['ec_number'].str.split(','):
         for i in j:
             annotation.append(i)
 
@@ -23,7 +25,7 @@ def create_h5_dataset(data_path, output_h5_file_path, records_limit = None, save
 
     dict_annotation = dict(zip(annotation, range(n_annotations)))
 
-    with open('dict_annotations.csv', 'w') as csv_file:
+    with open(os.path.join(data_path, 'dict_annotations_pretrain.csv'), 'w') as csv_file:
         writer = csv.writer(csv_file)
         for key, value in dict_annotation.items():
             writer.writerow([key, value])
@@ -31,6 +33,7 @@ def create_h5_dataset(data_path, output_h5_file_path, records_limit = None, save
     if verbose:
         sh.log('Will create an h5 dataset of %d sequences.' % n_seqs)
 
+    output_h5_file_path = output_h5_file_path + '/pretrain_ec.h5'
     with h5py.File(output_h5_file_path, 'w') as h5f:
         h5f.create_dataset('included_annotations', data=[a.encode('ascii') for a in annotation],
                            dtype=h5py.string_dtype())
@@ -77,13 +80,19 @@ def _encode_annotations_as_a_binary_matrix(records_annotations, annotation_to_in
 
     for i, record_annotations in enumerate(records_annotations):
         if record_annotations != '-':
-            print(record_annotations)
-            for j in record_annotations.replace(',; ', '; ').replace('; ,', '; ').replace(',','; ').replace('; ',' ').split():
-                print(j)
+            for j in record_annotations.split(','):
                 v = annotation_to_index.get(j)
                 annotation_masks[i, v] = True
+        # print the number of True values in each row
+        print(np.count_nonzero(annotation_masks[i, :]))
 
     return annotation_masks
 
 
-create_h5_dataset('pretrain_unfeaturized.csv', 'pretrain_unfeaturized.h5')
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='.h5 pretrain data creation')
+    parser.add_argument('--data_path', type=str, default='/home/ceas/davoudis/paper/data/cluster-90', help='Path to the data')
+    parser.add_argument('--output_h5_file_path', type=str, default='/home/ceas/davoudis/paper/data/cluster-90', help='Path to the output .h5 file')
+    args = parser.parse_args()
+    
+    create_h5_dataset(args.data_path, args.output_h5_file_path)
