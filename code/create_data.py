@@ -3,13 +3,16 @@ import json
 import fasta2csv.converter
 from Bio import SeqIO
 import argparse
-import psutil
 import ahocorasick
-import numpy as np
+import psutil
 
+def monitor_usage():
+    # Monitor RAM usage
+    used_memory = psutil.virtual_memory()
+    print('memory info: ', used_memory)
 
-def monitor_ram_usage():
-    print('RAM Used (GB):', psutil.virtual_memory()[3]/1000000000)
+    disk_usage = psutil.disk_usage('/')
+    print(f"Disk info: {disk_usage}")
 
 def convert_fasta_to_csv(fasta_path, csv_path):
     fasta2csv.converter.convert(fasta_path, csv_path)
@@ -170,6 +173,8 @@ if __name__ == '__main__':
     parser.add_argument('--info_file_path', type=str, default='data/swissprot_coordinates.json', help='Path to all 3d coordinates file')
     args = parser.parse_args()
 
+    monitor_usage()
     create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
+    monitor_usage()
     create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path)    
-    monitor_ram_usage()
+    monitor_usage()
