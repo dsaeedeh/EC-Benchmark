@@ -13,7 +13,7 @@
 4. run data_preprocessing.sh
 5. Run run_mmseqs2.sh to concat fasta files (pretrain.fasta, train.fasta and test.fasta). Be sure no other .fasta files are existed in the data directory
 We need all.fasta file to run mmseqs2 on it!
-
+6. Run create_data.sh
 ## Usage
 
 ## Contributing
