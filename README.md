@@ -2,6 +2,7 @@
 ## Table of Contents
 
 - [Installation](#installation)
+- [Models](#models)
 - [Usage](#usage)
 - [Contributing](#contributing)
 - [License](#license)
@@ -33,8 +34,26 @@ git clone https://github.com/dsaeedeh/GLM4EC.git
 5. Run run_mmseqs2.sh to concat fasta files (pretrain.fasta, train.fasta and test.fasta). Be sure no other .fasta files are existed in the data directory
 We need all.fasta file to run mmseqs2 on it!
 6. Run create_data.sh to create the final data for pretraining, training, and testing
-7. 
 
+## Models
+List of models:
+1. GLM4EC
+2. DeepEC
+3. ECPred
+4. UDSMProt
+5. Penlight
+6. ProteInfer
+7. ECRECer
+8. CLEAN
+9. BLASTp
+10. CatFam
+11. PRIAMv2
+
+Run the following command to train and test the models:
+```
+python main.py --model_name GLM4EC --train --test
+```
+To test the models, you need to download the pretrained models from [here]() and put them in the models directory.
 ## Contributing
 
 ## License
