@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-
+import psutil
 import os
 import re
 import json
@@ -10,6 +10,14 @@ from tensorflow import keras
 
 from proteinbert.shared_utils.util import log, load_object, get_parser_file_type, get_parser_directory_type
 from proteinbert.pretraining import run_pretraining, EpochGenerator, AutoSaveManager
+
+def monitor_usage():
+    # Monitor RAM usage
+    used_memory = psutil.virtual_memory()
+    print('memory info: ', used_memory)
+
+    disk_usage = psutil.disk_usage('/')
+    print(f"Disk info: {disk_usage}")
 
 class FixedReduceLROnPlateau(keras.callbacks.ReduceLROnPlateau):
     def on_train_begin(self, logs = None):
@@ -25,7 +33,7 @@ if __name__ == '__main__':
             required = True, help = 'The directory to save the model state into throughout the training process.')
     parser.add_argument('--resume-from', dest = 'resume_from', metavar = '/path/to/epoch_XXX_sample_XXX.pkl', type = get_parser_file_type(parser, must_exist = True), \
             default = None, help = 'Use the provided saved model state to resume training from.')
-    parser.add_argument('--epochs', dest = 'epochs', metavar = 'n', type = int, default = None, help = 'Run for the given number of epochs before exiting ' + \
+    parser.add_argument('--epochs', dest = 'epochs', metavar = 'n', type = int, default = 100000, help = 'Run for the given number of epochs before exiting ' + \
             '(by default will continue for ever, until interrupted).')
     parser.add_argument('--epochs-per-autosave', dest = 'epochs_per_autosave', metavar = '10', type = int, default = 10, help = 'The number of epochs per autosaving ' + \
             'of the model state.')
@@ -94,7 +102,9 @@ if __name__ == '__main__':
                 monitor = 'loss', verbose = 1)
         fit_callbacks = [lr_adjusting_callback]
     
+    monitor_usage()
     run_pretraining(create_model_function, epoch_generator, args.dataset_file, create_model_kwargs = create_model_kwargs, optimizer_class = optimizer_class, lr = args.lr, \
             annots_loss_weight = args.annotations_loss_weight, autosave_manager = autosave_manager, weights_dir = load_weights_dir, resume_from = resume_from, \
             n_epochs = args.epochs, fit_callbacks = fit_callbacks)
     log('Done.')
+    monitor_usage()
