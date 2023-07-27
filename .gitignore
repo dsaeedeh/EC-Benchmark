@@ -13,3 +13,5 @@
 *.feather
 *.xlsx
 **/data
+*.fasta
+*.fastq
