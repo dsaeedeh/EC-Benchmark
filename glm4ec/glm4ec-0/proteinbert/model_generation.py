@@ -120,8 +120,8 @@ class FinetuningModelGenerator(ModelGenerator):
                 layer.trainable = False
         
         model_inputs = model.input
-        pretraining_output_seq_layer = model.output
-        last_hidden_layer = pretraining_output_seq_layer
+        pretraining_output_seq_layer, pretraining_output_annoatations_layer = model.output
+        last_hidden_layer = pretraining_output_seq_layer if self.output_spec.output_type.is_seq else pretraining_output_annoatations_layer
         last_hidden_layer = keras.layers.Dropout(self.dropout_rate)(last_hidden_layer)
         
         if self.output_spec.output_type.is_categorical:
@@ -162,7 +162,7 @@ class InputEncoder:
         ]
         
 def load_pretrained_model_from_dump(dump_file_path, create_model_function, create_model_kwargs = {}, optimizer_class = keras.optimizers.Adam, lr = 2e-04,
-        other_optimizer_kwargs = {}, load_optimizer_weights = False):
+        other_optimizer_kwargs = {}, annots_loss_weight = 1, load_optimizer_weights = False):
     
     with open(dump_file_path, 'rb') as f:
         model_weights, optimizer_weights = pickle.load(f)
@@ -171,7 +171,7 @@ def load_pretrained_model_from_dump(dump_file_path, create_model_function, creat
         optimizer_weights = None
     
     model_generator = PretrainingModelGenerator(create_model_function, create_model_kwargs = create_model_kwargs, optimizer_class = optimizer_class, lr = lr,
-            other_optimizer_kwargs = other_optimizer_kwargs , model_weights = model_weights, optimizer_weights = optimizer_weights)
+            other_optimizer_kwargs = other_optimizer_kwargs, model_weights = model_weights, optimizer_weights = optimizer_weights)
     input_encoder = InputEncoder()
     
     return model_generator, input_encoder
