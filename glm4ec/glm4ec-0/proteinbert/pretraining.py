@@ -25,10 +25,7 @@ def run_pretraining(create_model_function, epoch_generator, h5_dataset_file_path
 
     np.random.seed(0)
     
-    with h5py.File(h5_dataset_file_path, 'r') as h5f:
-        n_annotations = len(h5f['included_annotations'])
-    
-    model_generator = PretrainingModelGenerator(create_model_function, n_annotations, create_model_kwargs = create_model_kwargs, optimizer_class = optimizer_class, lr = lr, \
+    model_generator = PretrainingModelGenerator(create_model_function, create_model_kwargs = create_model_kwargs, optimizer_class = optimizer_class, lr = lr, \
             other_optimizer_kwargs = other_optimizer_kwargs, annots_loss_weight = annots_loss_weight)
     model_trainer = ModelTrainer(model_generator, epoch_generator, autosave_manager = autosave_manager, weights_dir = weights_dir, fit_callbacks = fit_callbacks)
 
@@ -48,9 +45,6 @@ class ModelTrainer:
         self.weights_dir = weights_dir
         self.fit_callbacks = fit_callbacks
         
-        if self.autosave_manager is not None:
-            self.autosave_manager.n_annotations = self.model_generator.n_annotations
-        
     def setup(self, dataset_handler, resume_from = None):
         
         if resume_from is None:
@@ -68,8 +62,7 @@ class ModelTrainer:
         
         if resumed_weights_file_path is not None:
             with open(resumed_weights_file_path, 'rb') as f:
-                n_annotations, self.model_generator.model_weights, self.model_generator.optimizer_weights = pickle.load(f)
-                assert n_annotations == self.model_generator.n_annotations
+                self.model_generator.model_weights, self.model_generator.optimizer_weights = pickle.load(f)
                 log('Loaded weights from %s.' % resumed_weights_file_path)
         
         self.model = self.model_generator.create_model(starting_episode.seq_len)
@@ -100,15 +93,12 @@ class ModelTrainer:
 
 class EpochGenerator:
     
-    def __init__(self, n_batches_per_epoch = 100, p_seq_noise = 0.05, p_no_input_annot = 0.5, p_annot_noise_positive = 0.25, \
-            p_annot_noise_negative = 1e-04, load_chunk_size = 100000, min_time_per_episode = timedelta(minutes = 15), \
+    def __init__(self, n_batches_per_epoch = 100, p_seq_noise = 0.05, \
+            load_chunk_size = 100000, min_time_per_episode = timedelta(minutes = 15), \
             episode_settings = DEFAULT_EPISODE_SETTINGS):
         
         self.n_batches_per_epoch = n_batches_per_epoch
         self.p_seq_noise = p_seq_noise
-        self.p_no_input_annot = p_no_input_annot
-        self.p_annot_noise_positive = p_annot_noise_positive
-        self.p_annot_noise_negative = p_annot_noise_negative
         self.load_chunk_size = load_chunk_size
         self.min_time_per_episode = min_time_per_episode
         
@@ -188,29 +178,19 @@ class EpochGenerator:
         assigned_episode_indices = (np.random.rand(len(seq_lens), 1) <= samples_by_episodes_cum_probs).argmax(axis = 1)
         return assigned_episode_indices
     
-    def _encode_epoch(self, encoded_seqs, encoded_annotation_masks):
+    def _encode_epoch(self, encoded_seqs):
         
         seqs_noise_mask = np.random.choice([True, False], encoded_seqs.shape, p = [1 - self.p_seq_noise, self.p_seq_noise])
         random_seq_tokens = np.random.randint(0, n_tokens, encoded_seqs.shape)
         noisy_encoded_seqs = np.where(seqs_noise_mask, encoded_seqs, random_seq_tokens)
 
-        noisy_annotations_when_positive = np.random.choice([True, False], encoded_annotation_masks.shape, \
-                p = [1 - self.p_annot_noise_positive, self.p_annot_noise_positive])
-        noisy_annotations_when_negative = np.random.choice([True, False], encoded_annotation_masks.shape, \
-                p = [self.p_annot_noise_negative, 1 - self.p_annot_noise_negative])
-        noisy_annotation_masks = np.where(encoded_annotation_masks, noisy_annotations_when_positive, \
-                noisy_annotations_when_negative)
-        noisy_annotation_masks[np.random.choice([True, False], len(noisy_annotation_masks), p = [self.p_no_input_annot, \
-                1 - self.p_no_input_annot]), :] = False
-
         seq_weights = (encoded_seqs != additional_token_to_index['<PAD>']).astype(float)
         # When a protein has no annotations at all, we don't know whether it's because such annotations don't exist or just not found,
         # so it's safer to set the loss weight of those annotations to zero.
-        annotation_weights = encoded_annotation_masks.any(axis = -1).astype(float)
-        
-        X = [noisy_encoded_seqs, noisy_annotation_masks.astype(np.int8)]
-        Y = [np.expand_dims(encoded_seqs, axis = -1), encoded_annotation_masks.astype(np.int8)]
-        sample_weigths = [seq_weights, annotation_weights]
+        #         
+        X = noisy_encoded_seqs
+        Y = np.expand_dims(encoded_seqs, axis = -1)
+        sample_weigths = seq_weights
         
         return X, Y, sample_weigths
 
@@ -234,17 +214,17 @@ class EpisodeDataManager:
     
     def encode_next_epoch(self, log_length_dist = True):
         
-        seq_lengths, encoded_seqs, encoded_annotation_masks = self._encode_epoch(self.get_next_raw_epoch())
+        seq_lengths, encoded_seqs = self._encode_epoch(self.get_next_raw_epoch())
         
         if log_length_dist:
             log('Epoch sequence length distribution (for seq_len = %d): %s' % (self.seq_len, \
                     ', '.join('%s: %s' % item for item in pd.Series(seq_lengths).describe().iteritems())))
         
-        return encoded_seqs, encoded_annotation_masks
+        return encoded_seqs
     
     def encode_dummy_epoch(self, size = 1):
-        seq_lengths, encoded_seqs, encoded_annotation_masks = self._encode_epoch(self.peek_raw_epoch(size))
-        return encoded_seqs, encoded_annotation_masks
+        seq_lengths, encoded_seqs = self._encode_epoch(self.peek_raw_epoch(size))
+        return encoded_seqs
     
     def _encode_epoch(self, epoch_sample_cache):
         
@@ -257,15 +237,11 @@ class EpisodeDataManager:
                 zip(tokenized_seqs, chosen_offsets)]
         encoded_seqs = np.array([seq_tokens + max(self.seq_len - len(seq_tokens), 0) * [pad_token_index] for seq_tokens in \
                 trimmed_tokenized_seqs]).astype(np.int8)
-        
-        encoded_annotation_masks = np.concatenate([annotation_mask.reshape(1, -1) for annotation_mask in \
-                epoch_sample_cache.annotation_masks], axis = 0).astype(bool)
-        
+    
         # We hide the annotations of test-set samples to avoid "cheating" on downstream fine-tuning tests. Note that by removing all of the annotations,
         # EpochGenerator._encode_epoch will then set the annotation_weights for these records to 0, meaning they will not be part of the loss function.
-        encoded_annotation_masks[epoch_sample_cache.test_set_mask, :] = False
         
-        return seq_lengths, encoded_seqs, encoded_annotation_masks
+        return seq_lengths, encoded_seqs
     
     def _resolve_epoch_size(self, size):
         if size is None:
@@ -280,37 +256,33 @@ class DatasetHandler:
         self.total_size = len(dataset_h5f['seq_lengths'])
         
     def __getitem__(self, slicing):
-        return SampleCache(list(map(parse_seq, self.dataset_h5f['seqs'][slicing])), self.dataset_h5f['annotation_masks'][slicing], \
+        return SampleCache(list(map(parse_seq, self.dataset_h5f['seqs'][slicing])), \
                 self.dataset_h5f['test_set_mask'][slicing])
 
 class SampleCache:
     
-    def __init__(self, seqs = [], annotation_masks = [], test_set_mask = []):
+    def __init__(self, seqs = [], test_set_mask = []):
         self.seqs = list(seqs)
-        self.annotation_masks = list(annotation_masks)
         self.test_set_mask = list(test_set_mask)
         
     def extend(self, other_cache):
         self.seqs.extend(other_cache.seqs)
-        self.annotation_masks.extend(other_cache.annotation_masks)
         self.test_set_mask.extend(other_cache.test_set_mask)
         
     def pop(self, n):
         popped_sample_cache = self.slice_first(n)
         self.seqs = self.seqs[n:]
-        self.annotation_masks = self.annotation_masks[n:]
         self.test_set_mask = self.test_set_mask[n:]
         return popped_sample_cache
     
     def slice_first(self, n):
-        return SampleCache(self.seqs[:n], self.annotation_masks[:n], self.test_set_mask[:n])
+        return SampleCache(self.seqs[:n], self.test_set_mask[:n])
         
     def slice_indices(self, indices):
-        return SampleCache([self.seqs[i] for i in indices], [self.annotation_masks[i] for i in indices], \
-                [self.test_set_mask[i] for i in indices])
+        return SampleCache([self.seqs[i] for i in indices], [self.test_set_mask[i] for i in indices])
     
     def __len__(self):
-        assert len(self.seqs) == len(self.annotation_masks) == len(self.test_set_mask)
+        assert len(self.seqs) == len(self.test_set_mask)
         return len(self.seqs)
         
 class AutoSaveManager:
@@ -326,14 +298,14 @@ class AutoSaveManager:
     
         if sample_index == 0:
             save_path = os.path.join(self.directory, 'epoch_%d_sample_%d.pkl' % (epoch_index, sample_index))
-            _save_model_state(model, self.n_annotations, save_path)
+            _save_model_state(model, save_path)
             self.n_saves += 1
 
         if epoch_index % self.every_epochs_to_save != 0:
             return
 
         save_path = os.path.join(self.directory, 'epoch_%d_sample_%d.pkl' % (epoch_index, sample_index))
-        _save_model_state(model, self.n_annotations, save_path)
+        _save_model_state(model, save_path)
         self.n_saves += 1
 
         if self.last_saved_path_to_delete is not None:
@@ -344,7 +316,7 @@ class AutoSaveManager:
         else:
             self.last_saved_path_to_delete = save_path
 
-def _save_model_state(model, n_annotations, path):
+def _save_model_state(model, path):
     with open(path, 'wb') as f:
-        pickle.dump((n_annotations, model.get_weights(), model.optimizer.get_weights()), f)
+        pickle.dump((model.get_weights(), model.optimizer.get_weights()), f)
         
