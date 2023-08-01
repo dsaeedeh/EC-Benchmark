@@ -25,7 +25,7 @@ def create_h5_dataset(data_path, output_h5_file_path, records_limit = None, save
 
         for seqs_and_annotations_chunk in sh.to_chunks(load_seqs(data, records_limit = records_limit, verbose = verbose, log_progress_every = log_progress_every), save_chunk_size):
             end_index = start_index + len(seqs_and_annotations_chunk)
-            uniprot_id_chunk, seq_chunk, annotation_indices_chunk = map(list, zip(*seqs_and_annotations_chunk))
+            uniprot_id_chunk, seq_chunk = map(list, zip(*seqs_and_annotations_chunk))
 
             uniprot_ids[start_index:end_index] = uniprot_id_chunk
             seqs[start_index:end_index] = seq_chunk
