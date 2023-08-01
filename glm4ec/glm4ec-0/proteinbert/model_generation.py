@@ -59,25 +59,23 @@ class ModelGenerator:
 
 class PretrainingModelGenerator(ModelGenerator):
 
-    def __init__(self, create_model_function, n_annotations, create_model_kwargs = {}, optimizer_class = keras.optimizers.Adam, lr = 2e-04, other_optimizer_kwargs = {},
-            annots_loss_weight = 1, model_weights = None, optimizer_weights = None):
+    def __init__(self, create_model_function, create_model_kwargs = {}, optimizer_class = keras.optimizers.Adam, lr = 2e-04, other_optimizer_kwargs = {},
+            model_weights = None, optimizer_weights = None):
         
         ModelGenerator.__init__(self, optimizer_class = optimizer_class, lr = lr, other_optimizer_kwargs = other_optimizer_kwargs, model_weights = model_weights,
                 optimizer_weights = optimizer_weights)
         
         self.create_model_function = create_model_function
-        self.n_annotations = n_annotations
         self.create_model_kwargs = create_model_kwargs
-        self.annots_loss_weight = annots_loss_weight
         
     def create_model(self, seq_len, compile = True, init_weights = True):
         
         clear_session()
-        model = self.create_model_function(seq_len, n_tokens, self.n_annotations, **self.create_model_kwargs)
+        model = self.create_model_function(seq_len, n_tokens, **self.create_model_kwargs)
         
         if compile:
             model.compile(optimizer = self.optimizer_class(lr = self.lr, **self.other_optimizer_kwargs), loss = ['sparse_categorical_crossentropy', 'binary_crossentropy'],
-                    loss_weights = [1, self.annots_loss_weight])
+                    loss_weights = 1)
         
         if init_weights:
             self._init_weights(model)
@@ -122,8 +120,8 @@ class FinetuningModelGenerator(ModelGenerator):
                 layer.trainable = False
         
         model_inputs = model.input
-        pretraining_output_seq_layer, pretraining_output_annoatations_layer = model.output
-        last_hidden_layer = pretraining_output_seq_layer if self.output_spec.output_type.is_seq else pretraining_output_annoatations_layer
+        pretraining_output_seq_layer = model.output
+        last_hidden_layer = pretraining_output_seq_layer
         last_hidden_layer = keras.layers.Dropout(self.dropout_rate)(last_hidden_layer)
         
         if self.output_spec.output_type.is_categorical:
@@ -157,27 +155,24 @@ class FinetuningModelGenerator(ModelGenerator):
 
 class InputEncoder:
 
-    def __init__(self, n_annotations):
-        self.n_annotations = n_annotations
-
     def encode_X(self, seqs, seq_len):
         return [
             tokenize_seqs(seqs, seq_len),
-            np.zeros((len(seqs), self.n_annotations), dtype = np.int8)
+            np.zeros(len(seqs), dtype = np.int8)
         ]
         
 def load_pretrained_model_from_dump(dump_file_path, create_model_function, create_model_kwargs = {}, optimizer_class = keras.optimizers.Adam, lr = 2e-04,
-        other_optimizer_kwargs = {}, annots_loss_weight = 1, load_optimizer_weights = False):
+        other_optimizer_kwargs = {}, load_optimizer_weights = False):
     
     with open(dump_file_path, 'rb') as f:
-        n_annotations, model_weights, optimizer_weights = pickle.load(f)
+        model_weights, optimizer_weights = pickle.load(f)
         
     if not load_optimizer_weights:
         optimizer_weights = None
     
-    model_generator = PretrainingModelGenerator(create_model_function, n_annotations, create_model_kwargs = create_model_kwargs, optimizer_class = optimizer_class, lr = lr,
-            other_optimizer_kwargs = other_optimizer_kwargs, annots_loss_weight = annots_loss_weight, model_weights = model_weights, optimizer_weights = optimizer_weights)
-    input_encoder = InputEncoder(n_annotations)
+    model_generator = PretrainingModelGenerator(create_model_function, create_model_kwargs = create_model_kwargs, optimizer_class = optimizer_class, lr = lr,
+            other_optimizer_kwargs = other_optimizer_kwargs , model_weights = model_weights, optimizer_weights = optimizer_weights)
+    input_encoder = InputEncoder()
     
     return model_generator, input_encoder
 
