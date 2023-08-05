@@ -55,11 +55,14 @@ def create_clusters(cluster_path_100, cluster_path_90, cluster_path_70, cluster_
 remove EC numbers from pretrain data for the sequences that are similar to the sequences in test data based on the clustering result
 '''
 
-def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path):
+def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, test_3d_path, info_file_path, price_file_path):
 
     train = pd.read_feather(train_ec_path)
     test = pd.read_feather(test_ec_path)
+    price = pd.read_csv(price_file_path)
     test_ids = list(test['id'])
+    price_ids = list(price['id'])
+    test_ids.extend(price_ids)
     pretrain = pd.read_feather(pretrain_ec_path)
     train_3d_id = [record.id for record in SeqIO.parse(train_3d_path, 'fasta')]
     test_3d_id = [record.id for record in SeqIO.parse(test_3d_path, 'fasta')]
@@ -143,6 +146,16 @@ def create_data(pretrain_ec_path, train_ec_path, test_ec_path, train_3d_path, te
         unique_ecs_path = path + '/unique_ecs_test.csv'
         unique_ecs.to_csv(unique_ecs_path, index=False)
 
+        all_ecs = []
+        for i in range(price.shape[0]):
+            all_ecs.extend(price['ec_number'][i].split(','))
+        print('ec number of price: ', len(list(set(all_ecs))))
+        unique_ecs = list(set(all_ecs))
+        unique_ecs = [[unique_ecs[i], i] for i in range(len(unique_ecs))]
+        unique_ecs = pd.DataFrame(unique_ecs, columns=['ec_number', 'ec_number_num'])
+        unique_ecs_path = path + '/unique_ecs_price.csv'
+        unique_ecs.to_csv(unique_ecs_path, index=False)
+
         del train_info_list, test_info_list
 
         # Use boolean indexing to update the 'ec_number' column where the condition is met
@@ -171,10 +184,11 @@ if __name__ == '__main__':
     parser.add_argument('--train_3d_path', type=str, default='data/train_having_3d.fasta', help='Path to train 3d data')
     parser.add_argument('--test_3d_path', type=str, default='data/test_having_3d.fasta', help='Path to test 3d data')
     parser.add_argument('--info_file_path', type=str, default='data/swissprot_coordinates.json', help='Path to all 3d coordinates file')
+    parser.add_argument('--price_file_path', type=str, default='data/price.csv', help='Path to price file')
     args = parser.parse_args()
 
     monitor_usage()
     create_clusters(cluster_path_100='data/cluster-100/clusterRes_cluster.tsv', cluster_path_90='data/cluster-90/clusterRes_cluster.tsv', cluster_path_70='data/cluster-70/clusterRes_cluster.tsv', cluster_path_50='data/cluster-50/clusterRes_cluster.tsv', cluster_path_30='data/cluster-30/clusterRes_cluster.tsv')
     monitor_usage()
-    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path)    
+    create_data(pretrain_ec_path=args.pretrain_ec_path, train_ec_path=args.train_ec_path, test_ec_path=args.test_ec_path, train_3d_path=args.train_3d_path, test_3d_path=args.test_3d_path, info_file_path=args.info_file_path, price_file_path=args.price_file_path)    
     monitor_usage()
