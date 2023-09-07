@@ -138,8 +138,6 @@ class FinetuningModelGenerator(ModelGenerator):
         elif self.output_spec.output_type.is_MLC:
             pretraining_output_seq_layer = tf.reshape(pretraining_output_seq_layer, (-1, pretraining_output_seq_layer.shape[1]*pretraining_output_seq_layer.shape[2]))
             # last_hidden_layer = keras.layers.concatenate([pretraining_output_seq_layer, pretraining_output_annoatations_layer])
-            last_hidden_layer = pretraining_output_seq_layer
-            print('load model')
             output_layer = keras.layers.Dense(len(self.output_spec.unique_labels), activation='sigmoid')(last_hidden_layer)
             loss = 'binary_crossentropy'
         else:
@@ -148,7 +146,6 @@ class FinetuningModelGenerator(ModelGenerator):
         model = keras.models.Model(inputs = model_inputs, outputs = output_layer)
         
         model.compile(loss = loss, optimizer = self.optimizer_class(lr = self.lr, **self.other_optimizer_kwargs))
-        #model.compile(loss = loss, optimizer = 'adam')
         
         self._init_weights(model)
                 

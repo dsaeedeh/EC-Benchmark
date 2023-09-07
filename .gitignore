@@ -15,3 +15,14 @@
 **/data
 *.fasta
 *.fastq
+*.pdb
+**/ECPred/lib
+**/ECPred/temp
+**/ECPred
+**/PenLight
+**.jar
+*.pt
+**/PenLight/esm
+*.jpg
+*.png
+*.jpeg

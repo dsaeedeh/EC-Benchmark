@@ -89,7 +89,6 @@ def finetune(model_generator, input_encoder, output_spec, train_seqs, train_raw_
                    
     model_generator.optimizer_weights = None
 
-
 # +
 def read_in_chunks(file_object, chunk_size=100000):
     for chunk in pd.read_csv(file_object, chunksize=chunk_size, iterator=True):
@@ -100,22 +99,19 @@ def read_in_chunks(file_object, chunk_size=100000):
                 
 def chunked_finetune(dict_annotation, model_generator, input_encoder, output_spec, train_set_file_path, valid_seqs = None, valid_raw_Y = None, seq_len = 512, batch_size = 32,
         max_epochs_per_stage = 40, lr = None, begin_with_frozen_pretrained_layers = True, lr_with_frozen_pretrained_layers = None, n_final_epochs = 1,
-        final_seq_len = 1024, final_lr = None, callbacks = [], two=True, three=False, fliped=True):
+        final_seq_len = 1024, final_lr = None, callbacks = []):
     
-    
-    read_chunk_seq = read_in_chunks(train_set_file_path)
-
     if begin_with_frozen_pretrained_layers:
         counter = 0
         log('Training with frozen pretrained layers...')
-
+        read_chunk_seq = read_in_chunks(train_set_file_path)
         for chunk in read_chunk_seq:
             counter += 1
             print('chunk:', counter)
             array_ecs_train = np.zeros((len(chunk), len(output_spec.unique_labels)), dtype=int)
             for i in range(chunk.shape[0]):
                 if chunk.iloc[i]['ec_number'] != '-':
-                    for j in chunk.iloc[i]['ec_number'].replace(',; ', '; ').replace('; ,', '; ').replace(',','; ').replace('; ',' ').split():
+                    for j in chunk.iloc[i]['ec_number'].split(','):
                         v = dict_annotation.get(j)
                         array_ecs_train[i, v] = 1
             
@@ -136,7 +132,7 @@ def chunked_finetune(dict_annotation, model_generator, input_encoder, output_spe
         array_ecs_train = np.zeros((len(chunk), len(output_spec.unique_labels)), dtype=int)
         for i in range(chunk.shape[0]):
             if chunk.iloc[i]['ec_number'] != '-':
-                    for j in chunk.iloc[i]['ec_number'].replace(',; ', '; ').replace('; ,', '; ').replace(',','; ').replace('; ',' ').split():
+                    for j in chunk.iloc[i]['ec_number'].split(','):
                         v = dict_annotation.get(j)
                         array_ecs_train[i, v] = 1
 
@@ -150,84 +146,30 @@ def chunked_finetune(dict_annotation, model_generator, input_encoder, output_spe
                 
     if n_final_epochs > 0:
     
-        if two:
-            counter = 0
-            read_chunk_seq = read_in_chunks(train_set_file_path)
-            log('Training on 1st final epochs of sequence length %d...' % final_seq_len)
-            final_batch_size = max(int(batch_size / (final_seq_len / seq_len)), 1)
-                
-            for chunk in read_chunk_seq: 
-                counter += 1
-                print('chunk:', counter)
-                array_ecs_train = np.zeros((len(chunk), len(output_spec.unique_labels)), dtype=int)
-                for i in range(chunk.shape[0]):
-                    if chunk.iloc[i]['ec_number'] != '-':
-                        for j in chunk.iloc[i]['ec_number'].replace(',; ', '; ').replace('; ,', '; ').replace(',','; ').replace('; ',' ').split():
-                            v = dict_annotation.get(j)
-                            array_ecs_train[i, v] = 1
-                
-                chunk['label'] = array_ecs_train.tolist()
-  
-                encoded_train_set, encoded_valid_set = encode_train_and_valid_sets(chunk['seq'], chunk['label'], valid_seqs, valid_raw_Y, input_encoder, output_spec, final_seq_len)
-                model_generator.train(encoded_train_set, encoded_valid_set, final_seq_len, final_batch_size, n_final_epochs, lr = final_lr, callbacks = callbacks,
-                        freeze_pretrained_layers = False)
-                del chunk
-                
-        if three:
-            counter = 0
-            read_chunk_seq = read_in_chunks(train_set_file_path)
-            log('Training on 1st final epochs of sequence length %d...' % final_seq_len)
-            final_batch_size = max(int(batch_size / (final_seq_len / seq_len)), 1)
-                
-            for chunk in read_chunk_seq: 
-                counter += 1
-                print('chunk:', counter)
-                array_ecs_train = np.zeros((len(chunk), len(output_spec.unique_labels)), dtype=int)
-                for i in range(chunk.shape[0]):
-                    if chunk.iloc[i]['ec_number'] != '-':
-                        for j in chunk.iloc[i]['ec_number'].replace(',; ', '; ').replace('; ,', '; ').replace(',','; ').replace('; ',' ').split():
-                            v = dict_annotation.get(j)
-                            array_ecs_train[i, v] = 1
-                
-                chunk['label'] = array_ecs_train.tolist()
-            
-                encoded_train_set, encoded_valid_set = encode_train_and_valid_sets(chunk['seq'], chunk['label'], valid_seqs, valid_raw_Y, input_encoder, output_spec, final_seq_len)
-                model_generator.train(encoded_train_set, encoded_valid_set, final_seq_len, final_batch_size, n_final_epochs, lr = final_lr, callbacks = callbacks,
-                        freeze_pretrained_layers = False)
-                del chunk
-            
-            
-            read_chunk_seq = read_in_chunks(train_set_file_path)
-            if fliped:
-                final_seq_len = int(final_seq_len / 2)
-            else:
-                final_seq_len = int(final_seq_len * 2)
-            log('Training on 2nd final epochs of sequence length %d...' % final_seq_len)
-            final_batch_size = max(int(batch_size / (final_seq_len / seq_len)), 1)
-            
-            for chunk in read_chunk_seq: 
-                counter += 1
-                print('chunk:', counter)
-                array_ecs_train = np.zeros((len(chunk), len(output_spec.unique_labels)), dtype=int)
-                for i in range(chunk.shape[0]):
-                    if chunk.iloc[i]['ec_number'] != '-':
-                        for j in chunk.iloc[i]['ec_number'].replace(',; ', '; ').replace('; ,', '; ').replace(',','; ').replace('; ',' ').split():
-                            v = dict_annotation.get(j)
-                            array_ecs_train[i, v] = 1
-                
-                chunk['label'] = array_ecs_train.tolist()
-                
-                encoded_train_set, encoded_valid_set = encode_train_and_valid_sets(chunk['seq'], chunk['label'], valid_seqs, valid_raw_Y, input_encoder, output_spec, final_seq_len)
-                model_generator.train(encoded_train_set, encoded_valid_set, final_seq_len, final_batch_size, n_final_epochs, lr = final_lr, callbacks = callbacks,
-                        freeze_pretrained_layers = False)
-                del chunk
-        
-            
+        counter = 0
+        read_chunk_seq = read_in_chunks(train_set_file_path)
+        log('Training on 1st final epochs of sequence length %d...' % final_seq_len)
+        final_batch_size = max(int(batch_size / (final_seq_len / seq_len)), 1)
+
+        for chunk in read_chunk_seq: 
+            counter += 1
+            print('chunk:', counter)
+            array_ecs_train = np.zeros((len(chunk), len(output_spec.unique_labels)), dtype=int)
+            for i in range(chunk.shape[0]):
+                if chunk.iloc[i]['ec_number'] != '-':
+                    for j in chunk.iloc[i]['ec_number'].split(','):
+                        v = dict_annotation.get(j)
+                        array_ecs_train[i, v] = 1
+
+            chunk['label'] = array_ecs_train.tolist()
+
+            encoded_train_set, encoded_valid_set = encode_train_and_valid_sets(chunk['seq'], chunk['label'], valid_seqs, valid_raw_Y, input_encoder, output_spec, final_seq_len)
+            model_generator.train(encoded_train_set, encoded_valid_set, final_seq_len, final_batch_size, n_final_epochs, lr = final_lr, callbacks = callbacks,
+                    freeze_pretrained_layers = False)
+            del chunk
 
     model_generator.optimizer_weights = None
 
-
-# -
 
 def evaluate_by_len(model_generator, input_encoder, output_spec, seqs, raw_Y, start_seq_len = 512, start_batch_size = 32, increase_factor = 2):
     

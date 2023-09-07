@@ -8,8 +8,8 @@ from tensorflow import keras
 from . import conv_and_global_attention_model
 from .model_generation import load_pretrained_model_from_dump
 
-DEFAULT_LOCAL_MODEL_DUMP_DIR = 'proteinbert_models'
-DEFAULT_LOCAL_MODEL_DUMP_FILE_NAME = 'epoch_54740_sample_1300000.pkl'
+DEFAULT_LOCAL_MODEL_DUMP_DIR = 'proteinbert_models/cluster-30'
+DEFAULT_LOCAL_MODEL_DUMP_FILE_NAME = 'epoch_55000_sample_59630000.pkl'
 
 def load_pretrained_model(local_model_dump_dir=DEFAULT_LOCAL_MODEL_DUMP_DIR,
                           local_model_dump_file_name=DEFAULT_LOCAL_MODEL_DUMP_FILE_NAME,

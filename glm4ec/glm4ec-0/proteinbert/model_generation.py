@@ -162,7 +162,7 @@ class InputEncoder:
         ]
         
 def load_pretrained_model_from_dump(dump_file_path, create_model_function, create_model_kwargs = {}, optimizer_class = keras.optimizers.Adam, lr = 2e-04,
-        other_optimizer_kwargs = {}, annots_loss_weight = 1, load_optimizer_weights = False):
+        other_optimizer_kwargs = {}, load_optimizer_weights = False):
     
     with open(dump_file_path, 'rb') as f:
         model_weights, optimizer_weights = pickle.load(f)
