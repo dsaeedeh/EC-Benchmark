@@ -135,3 +135,7 @@ def unzipfile(filename, target_dir):
 
 def isfileExists(filepath):
    return os.path.exists(filepath)
+
+def create_folder(folderpath):
+    if not os.path.exists(folderpath):
+        os.makedirs(folderpath)

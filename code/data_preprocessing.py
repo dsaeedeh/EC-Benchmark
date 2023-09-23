@@ -4,7 +4,6 @@ import sys,os
 from tqdm import tqdm
 sys.path.append(os.getcwd())
 import argparse
-from functools import reduce
 from ECRECer.tools import filetool as ftool
 from ECRECer.tools import exact_ec_from_uniprot as exactec
 from ECRECer.tools import funclib
