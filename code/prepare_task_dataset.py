@@ -94,57 +94,15 @@ def esm_embedding():
     full_snap_data = full_snp_data.sort_values(by=['id', 'date_annotation_update'], ascending=False)
     full_snap_data = full_snap_data[['id', 'seq']].drop_duplicates(subset='id', keep='first')
     full_snap_data.reset_index(drop=True, inplace=True)
-    # loading exsisting features
-    if ftool.isfileExists('ECRECer/data/featureBank/embd_esm0.feather'):
-        feature_esm0 = pd.read_feather('ECRECer/data/featureBank/embd_esm0.feather')
-        feature_esm32 = pd.read_feather('ECRECer/data/featureBank/embd_esm32.feather')
-        feature_esm33 = pd.read_feather('ECRECer/data/featureBank/embd_esm33.feather')
-        feature_unirep = pd.read_feather('ECRECer/data/featureBank/embd_unirep.feather')
-        feature_onehot = pd.read_feather('ECRECer/data/featureBank/embd_onehot.feather')
-        #caculate embedding list
-        needesm = full_snap_data[~full_snap_data.id.isin(list(set(feature_esm33.id)))]
-        needunirep = full_snap_data[~full_snap_data.id.isin(list(set(feature_unirep.id)))]
-        needonehot = full_snap_data[~full_snap_data.id.isin(list(set(feature_onehot.id)))]
-    else:
-        needesm = full_snap_data
-        needunirep = full_snap_data
-        needonehot = full_snap_data
-
-    if len(needesm)>0:
-        tr_rep0, tr_rep32, tr_rep33 = esmebd.get_rep_multi_sequence(sequences=needesm, model='esm1b_t33_650M_UR50S',seqthres=1022)
-        #merge existing
-        if feature_esm0.shape[0] > 0:
-            feature_esm0 = pd.concat([feature_esm0, tr_rep0], axis=0).reset_index(drop=True)
-        else:
-            feature_esm0 = tr_rep0
-        if feature_esm32.shape[0] > 0:  
-            feature_esm32 = pd.concat([feature_esm32, tr_rep32], axis=0).reset_index(drop=True)
-        else:
-            feature_esm32 = tr_rep32
-        if feature_esm33.shape[0] > 0:    
-            feature_esm33 = pd.concat([feature_esm33, tr_rep33], axis=0).reset_index(drop=True)
-        else:   
-            feature_esm33 = tr_rep33    
-        feature_esm0.to_feather('ECRECer/data/featureBank/embd_esm0.feather')
-        feature_esm32.to_feather('ECRECer/data/featureBank/embd_esm32.feather')
-        feature_esm33.to_feather('ECRECer/data/featureBank/embd_esm33.feather')
     
-    if len(needunirep) > 0:
-        tr_unirep = unirep.getunirep(needunirep, 40)
-        if feature_unirep.shape[0] > 0:
-            feature_unirep = pd.concat([feature_unirep, tr_unirep],axis=0).reset_index(drop=True)
-        else:
-            feature_unirep = tr_unirep
-        feature_unirep.to_feather('ECRECer/data/featureBank/embd_unirep.feather')
-    
-    if len(needonehot) > 0:
-        tr_onehot = onehotebd.get_onehot(sequences=needonehot, padding=True, padding_window=1500)
-        if feature_onehot.shape[0] > 0:
-            feature_onehot = pd.concat([feature_onehot, tr_onehot],axis=0).reset_index(drop=True)
-        else:
-            feature_onehot = tr_onehot
-        feature_onehot.to_feather('ECRECer/data/featureBank/embd_onehot.feather')
+    needesm = full_snap_data
 
+    if len(needesm)>0 and not os.path.exists('ECRECer/data/featureBank/embd_esm0.feather'):
+        tr_rep0, tr_rep32, tr_rep33 = esmebd.get_rep_multi_sequence(sequences=needesm, model='esm1b_t33_650M_UR50S',seqthres=1022)    
+        tr_rep0.to_feather('ECRECer/data/featureBank/embd_esm0.feather')
+        tr_rep32.to_feather('ECRECer/data/featureBank/embd_esm32.feather')
+        tr_rep33.to_feather('ECRECer/data/featureBank/embd_esm33.feather')
+    
 
 #main function
 def main():
