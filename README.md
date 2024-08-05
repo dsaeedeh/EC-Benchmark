@@ -40,14 +40,13 @@ List of models:
 1. GLM4EC
 2. DeepEC
 3. ECPred
-4. UDSMProt
-5. Penlight
-6. ProteInfer
-7. ECRECer
-8. CLEAN
-9. BLASTp
-10. CatFam
-11. PRIAMv2
+4. DeepECtransformer
+5. TFPC
+6. ECRECer
+7. CLEAN
+8. BLASTp
+9. CatFam
+10. PRIAMv2
 
 Run the following command to train and test the models:
 ```
